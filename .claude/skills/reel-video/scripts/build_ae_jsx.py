@@ -1,0 +1,573 @@
+#!/usr/bin/env python3
+"""timeline.json -> build.jsx (After Effects ExtendScript)
+
+build.jsx tek seferde şunları yapar: görselleri / sesleri içe aktarır, 1080x1920 ana kompozisyonu kurar,
+her sahneye hareket (push / pan / parallax) ve çerçeve (tam / daire / polaroid / bölünmüş) verir,
+geçişleri (blur whip, zoom blur, flash, fade, ışık sızması, daire açılış, kayma) ayar katmanlarıyla yapar,
+başlıkları ve altyazıları kelime zamanlarına göre yerleştirir, ses efektlerini koyar, stil gradını ekler,
+render kuyruğuna H.264 ekler ve projeyi .aep olarak kaydeder.
+
+Kullanım:
+  python3 build_ae_jsx.py timeline.json -o build/build.jsx --aep build/reel.aep --mp4 build/reel.mp4 [--render-now]
+
+Çalıştırma (After Effects kapalıyken veya açıkken):
+  Windows: "C:\\Program Files\\Adobe\\Adobe After Effects 2025\\Support Files\\AfterFX.exe" -r build\\build.jsx
+  macOS:   osascript -e 'tell application "Adobe After Effects 2025" to DoScriptFile "/abs/build/build.jsx"'
+Render:
+  aerender -project build/reel.aep -comp REEL -output build/reel.mp4
+"""
+import argparse
+import json
+from pathlib import Path
+
+from styles import color, resolve
+
+POS_Y = {"top": 0.20, "upper": 0.30, "center": 0.45, "lower": 0.60, "bottom": 0.66}
+
+
+def tr_upper(s):
+    return s.replace("i", "İ").replace("ı", "I").upper()
+
+
+def prepare(tl, aep, mp4, render_now, om_template):
+    st = resolve(tl.get("style", "earn"), {"fonts": tl.get("fonts") or {}})
+    W, H = tl["size"]
+    cap = st["caption"]
+    scenes = []
+    for i, sc in enumerate(tl["scenes"]):
+        s = dict(sc)
+        s.setdefault("transition", st["default_transition"] if i else "cut")
+        s.setdefault("move", st["default_move"])
+        s.setdefault("frame", "full")
+        if s.get("title"):
+            t = dict(st["title"])
+            t.update(s["title"])
+            raw = t.get("text", "")
+            t["text"] = raw if t.get("keep_case") else (tr_upper(raw) if tl["style"] == "earn" else raw)
+            t["rgb"] = color(st, t.get("color"))
+            t["y"] = POS_Y.get(t.get("pos", "top"), 0.2) * H
+            longest = max((len(x) for x in t["text"].split("\n")), default=1)
+            # Anton harf genişliği ~0.45 * punto; ekran genişliğinin %88'ini geçme
+            t["size"] = int(min(t.get("size", st["title"]["size"]), 0.88 * W / max(longest * 0.47, 1)))
+            t["font"] = st["fonts"]["title"] if t.get("anim") != "type" else st["fonts"]["caption"]
+            if t.get("font_key"):
+                t["font"] = st["fonts"].get(t["font_key"], t["font"])
+            s["title"] = t
+        if s.get("label"):  # polaroid altı / görsel altı küçük etiket
+            s["label"] = tr_upper(s["label"]) if tl["style"] == "earn" else s["label"]
+        scenes.append(s)
+    caps = []
+    for c in tl["captions"]:
+        words = [tl["words"][i] for i in c["words"]]
+        text = c["text"]
+        # anahtar kelimelerin karakter aralıkları (vurgu rengi için)
+        ranges, pos = [], 0
+        for w in words:
+            if w.get("key"):
+                ranges.append([pos, pos + len(w["w"])])
+            pos += len(w["w"]) + 1
+        caps.append({"text": text, "start": c["start"], "end": c["end"], "key": ranges})
+    out = tl.get("outro")
+    if out:
+        out = dict(out)
+        out["lines"] = [tr_upper(x) if tl["style"] == "earn" else x for x in out.get("text", [])]
+    sfx = {k: v for k, v in (tl.get("sfx") or {}).items() if v}
+    music = tl.get("music") or {}
+    return {
+        "title": (tl.get("title") or "REEL")[:60],
+        "style": tl["style"],
+        "W": W, "H": H, "fps": tl["fps"], "dur": tl["duration"],
+        "vo": tl.get("voiceover"),
+        "music": music.get("file"), "music_db": music.get("db", st["music_db"]),
+        "sfx": sfx, "sfx_map": st["sfx_map"],
+        "scenes": scenes,
+        "captions": caps,
+        "cap": {"mode": cap["mode"], "size": cap["size"], "y": cap["y"] * H, "rgb": color(st, cap["color"]),
+                "key_rgb": color(st, cap["key_color"]), "font": st["fonts"]["caption"],
+                "pill_rgb": color(st, cap.get("pill", "#1E1E1E")), "pill_opacity": cap.get("pill_opacity", 78)},
+        "grade": st["grade"],
+        "colors": {k: color(st, k) for k in st["colors"]},
+        "fonts": st["fonts"],
+        "outro": out,
+        "render": {"aep": str(Path(aep).resolve()), "mp4": str(Path(mp4).resolve()),
+                   "log": str(Path(aep).resolve().with_suffix(".log.txt")),
+                   "render_now": render_now, "om_template": om_template},
+    }
+
+
+JS = r"""
+// ---- reel-video build.jsx (otomatik üretildi; elle düzenlemek yerine shotlist'i değiştirip yeniden üretin) ----
+(function () {
+var LOG = [];
+function log(m) { LOG.push(m); }
+function flushLog() {
+  try { var f = new File(D.render.log); f.encoding = "UTF-8"; f.open("w"); f.write(LOG.join("\n")); f.close(); } catch (e) {}
+}
+try {
+app.beginUndoGroup("reel-video build");
+if (!app.project) app.newProject();
+var proj = app.project;
+var W = D.W, H = D.H, FPS = D.fps, DUR = D.dur;
+var folder = proj.items.addFolder("reel_assets");
+var cache = {};
+function imp(p) {
+  if (!p) return null;
+  if (cache[p]) return cache[p];
+  var f = new File(p);
+  if (!f.exists) { log("EKSİK DOSYA: " + p); return null; }
+  try {
+    var it = proj.importFile(new ImportOptions(f));
+    it.parentFolder = folder; cache[p] = it; return it;
+  } catch (e) { log("İÇE AKTARILAMADI: " + p + " -> " + e); return null; }
+}
+var comp = proj.items.addComp("REEL", W, H, 1, DUR, FPS);
+comp.bgColor = [0, 0, 0];
+comp.motionBlur = true;
+
+function T(l) { return l.property("ADBE Transform Group"); }
+function P(l, n) { return T(l).property(n); }
+function fx(l, match) { try { return l.property("ADBE Effect Parade").addProperty(match); } catch (e) { log("efekt yok: " + match); return null; } }
+function fp(eff, match, idx) { if (!eff) return null; var p = null; try { p = eff.property(match); } catch (e) {} if (!p && idx) { try { p = eff.property(idx); } catch (e2) {} } return p; }
+function key(prop, t, v) { if (prop) { try { prop.setValueAtTime(t, v); } catch (e) { log("key hatası " + prop.name + ": " + e); } } }
+function easeAll(prop, inf) {
+  if (!prop) return;
+  inf = inf || 70;
+  for (var k = 1; k <= prop.numKeys; k++) {
+    for (var n = 1; n <= 3; n++) {
+      try {
+        var a = [], b = [];
+        for (var j = 0; j < n; j++) { a.push(new KeyframeEase(0, inf)); b.push(new KeyframeEase(0, inf)); }
+        prop.setTemporalEaseAtKey(k, a, b); break;
+      } catch (e) {}
+    }
+  }
+}
+function span(l, a, b) { l.inPoint = Math.max(0, a); l.outPoint = Math.min(DUR, b); }
+function adj(name, a, b) {
+  var s = comp.layers.addSolid([1, 1, 1], name, W, H, 1);
+  s.adjustmentLayer = true; span(s, a, b); return s;
+}
+function solid(rgb, name, a, b) { var s = comp.layers.addSolid(rgb, name, W, H, 1); span(s, a, b); return s; }
+function cover(it, w, h) { return Math.max(w / it.width, h / it.height) * 100; }
+function setMatte(layer, matte) {
+  try { layer.setTrackMatte(matte, TrackMatteType.ALPHA); }
+  catch (e) { try { layer.trackMatteType = TrackMatteType.ALPHA; } catch (e2) { log("track matte kurulamadı"); } }
+}
+function addText(str, o) {
+  var L = comp.layers.addText(str);
+  var tp = L.property("ADBE Text Properties").property("ADBE Text Document");
+  var d = tp.value;
+  try { d.resetCharStyle(); } catch (e) {}
+  d.fontSize = o.size; d.fillColor = o.rgb; d.applyFill = true;
+  try { d.font = o.font; } catch (e) { log("font atanamadı: " + o.font); }
+  if (o.stroke) { d.applyStroke = true; d.strokeColor = o.stroke; d.strokeWidth = o.strokeW || 6; d.strokeOverFill = false; }
+  else { d.applyStroke = false; }
+  d.justification = ParagraphJustification.CENTER_JUSTIFY;
+  if (o.tracking !== undefined) d.tracking = o.tracking;
+  if (o.leading) { try { d.autoLeading = false; d.leading = o.leading; } catch (e) {} }
+  tp.setValue(d);
+  try { if (tp.value.font !== o.font) log("FONT YOK, yerine " + tp.value.font + " kullanıldı (istenen " + o.font + ")"); } catch (e) {}
+  // anchor'ı metnin görsel merkezine al
+  P(L, "ADBE Anchor Point").expression = "var r=sourceRectAtTime(time,false);[r.left+r.width/2,r.top+r.height/2]";
+  P(L, "ADBE Position").setValue([o.x, o.y]);
+  return L;
+}
+function colorRange(L, a, b, rgb) {
+  try {
+    var anim = L.property("ADBE Text Properties").property("ADBE Text Animators").addProperty("ADBE Text Animator");
+    anim.property("ADBE Text Animator Properties").addProperty("ADBE Text Fill Color").setValue(rgb);
+    var sel = anim.property("ADBE Text Selectors").addProperty("ADBE Text Selector");
+    sel.property("ADBE Text Range Advanced").property("ADBE Text Range Units").setValue(2);
+    sel.property("ADBE Text Index Start").setValue(a);
+    sel.property("ADBE Text Index End").setValue(b);
+  } catch (e) { log("renk aralığı kurulamadı: " + e); }
+}
+function typeOn(L, a, d) {
+  try {
+    var anim = L.property("ADBE Text Properties").property("ADBE Text Animators").addProperty("ADBE Text Animator");
+    anim.property("ADBE Text Animator Properties").addProperty("ADBE Text Opacity").setValue(0);
+    var sel = anim.property("ADBE Text Selectors").addProperty("ADBE Text Selector");
+    var st = sel.property("ADBE Text Percent Start");
+    key(st, a, 0); key(st, a + d, 100);
+  } catch (e) { log("type-on kurulamadı: " + e); }
+}
+function shapeRect(name, w, h, rgb, round, strokeRgb, strokeW) {
+  var L = comp.layers.addShape(); L.name = name;
+  var g = L.property("ADBE Root Vectors Group").addProperty("ADBE Vector Group");
+  var c = g.property("ADBE Vectors Group");
+  var r = c.addProperty("ADBE Vector Shape - Rect");
+  r.property("ADBE Vector Rect Size").setValue([w, h]);
+  r.property("ADBE Vector Rect Roundness").setValue(round || 0);
+  if (rgb) { c.addProperty("ADBE Vector Graphic - Fill").property("ADBE Vector Fill Color").setValue(rgb); }
+  if (strokeRgb) {
+    var s = c.addProperty("ADBE Vector Graphic - Stroke");
+    s.property("ADBE Vector Stroke Color").setValue(strokeRgb);
+    s.property("ADBE Vector Stroke Width").setValue(strokeW || 4);
+  }
+  P(L, "ADBE Position").setValue([W / 2, H / 2]);
+  return { layer: L, rect: r };
+}
+function shapeEllipse(name, d, rgb, strokeRgb, strokeW) {
+  var L = comp.layers.addShape(); L.name = name;
+  var g = L.property("ADBE Root Vectors Group").addProperty("ADBE Vector Group");
+  var c = g.property("ADBE Vectors Group");
+  var e = c.addProperty("ADBE Vector Shape - Ellipse");
+  e.property("ADBE Vector Ellipse Size").setValue([d, d]);
+  if (rgb) { c.addProperty("ADBE Vector Graphic - Fill").property("ADBE Vector Fill Color").setValue(rgb); }
+  if (strokeRgb) {
+    var s = c.addProperty("ADBE Vector Graphic - Stroke");
+    s.property("ADBE Vector Stroke Color").setValue(strokeRgb);
+    s.property("ADBE Vector Stroke Width").setValue(strokeW || 4);
+  }
+  P(L, "ADBE Position").setValue([W / 2, H / 2]);
+  return { layer: L, ellipse: e };
+}
+var sfxCount = 0;
+function sfx(name, t, db) {
+  var p = D.sfx[name]; if (!p) return;
+  var it = imp(p); if (!it) return;
+  var L = comp.layers.add(it); L.startTime = Math.max(0, t); L.name = "SFX " + name;
+  try { L.property("ADBE Audio Group").property("ADBE Audio Levels").setValue([db || -6, db || -6]); } catch (e) {}
+  sfxCount++;
+}
+
+// ---- hareket: base ölçek s0, hareket tipi, süre [a,b]
+function applyMove(L, move, s0, a, b, cx, cy) {
+  var sc = P(L, "ADBE Scale"), ps = P(L, "ADBE Position"), rt = P(L, "ADBE Rotate Z");
+  var dx = W * 0.06, dy = H * 0.04;
+  cx = cx || W / 2; cy = cy || H / 2;
+  if (move === "push_in") { key(sc, a, [s0, s0]); key(sc, b, [s0 * 1.14, s0 * 1.14]); }
+  else if (move === "pull_out") { key(sc, a, [s0 * 1.16, s0 * 1.16]); key(sc, b, [s0 * 1.02, s0 * 1.02]); }
+  else if (move === "pan_left") { sc.setValue([s0 * 1.15, s0 * 1.15]); key(ps, a, [cx + dx, cy]); key(ps, b, [cx - dx, cy]); }
+  else if (move === "pan_right") { sc.setValue([s0 * 1.15, s0 * 1.15]); key(ps, a, [cx - dx, cy]); key(ps, b, [cx + dx, cy]); }
+  else if (move === "pan_up") { sc.setValue([s0 * 1.15, s0 * 1.15]); key(ps, a, [cx, cy + dy]); key(ps, b, [cx, cy - dy]); }
+  else if (move === "pan_down") { sc.setValue([s0 * 1.15, s0 * 1.15]); key(ps, a, [cx, cy - dy]); key(ps, b, [cx, cy + dy]); }
+  else if (move === "parallax") {
+    key(sc, a, [s0 * 1.06, s0 * 1.06]); key(sc, b, [s0 * 1.17, s0 * 1.17]);
+    key(ps, a, [cx - dx * 0.4, cy + dy * 0.3]); key(ps, b, [cx + dx * 0.4, cy - dy * 0.3]);
+    key(rt, a, -0.8); key(rt, b, 0.8);
+  }
+  else { sc.setValue([s0 * 1.02, s0 * 1.02]); }
+  easeAll(sc, 33); easeAll(ps, 33); easeAll(rt, 33);
+}
+function popIn(L, t, from) {
+  var sc = P(L, "ADBE Scale"), op = P(L, "ADBE Opacity");
+  key(sc, t, [from, from]); key(sc, t + 0.16, [106, 106]); key(sc, t + 0.26, [100, 100]);
+  key(op, t, 0); key(op, t + 0.08, 100);
+  easeAll(sc, 60);
+}
+function blurredCopy(it, a, b) {
+  var L = comp.layers.add(it); span(L, a, b);
+  var s0 = cover(it, W, H) * 1.1; P(L, "ADBE Scale").setValue([s0, s0]);
+  var g = fx(L, "ADBE Gaussian Blur 2"); var p = fp(g, "ADBE Gaussian Blur 2-0001", 1); if (p) p.setValue(45);
+  var br = fx(L, "ADBE Brightness & Contrast 2"); var bp = fp(br, "ADBE Brightness & Contrast 2-0001", 1); if (bp) bp.setValue(-45);
+  return L;
+}
+
+// ---- sahneler (alttan üste: her yeni katman en üste eklenir, gelen sahne gidenin üstünde kalır)
+var OVL = 0.3; // fade / leak / daire geçişlerinde üst üste binme
+for (var i = 0; i < D.scenes.length; i++) {
+  var sc = D.scenes[i];
+  var a = sc.start, b = sc.end;
+  var tr = sc.transition || "cut";
+  var aIn = (i > 0 && (tr === "fade" || tr === "light_leak" || tr === "circle_reveal")) ? a - OVL : a;
+  var it = imp(sc.video || sc.image);
+  var L, cxy = [W / 2, H / 2];
+  if (!it) {
+    L = solid([0.25, 0.22, 0.2], "EKSİK " + sc.id, aIn, b);
+    span(addText(sc.id + " görsel eksik", { size: 60, rgb: [1, 1, 1], font: D.fonts.caption, x: W / 2, y: H / 2 }), aIn, b);
+    continue;
+  }
+  var frame = sc.frame || "full";
+  if (frame === "full") {
+    L = comp.layers.add(it); L.name = sc.id;
+    if (sc.video) L.startTime = aIn;
+    span(L, aIn, b + 0.02);
+    if (sc.video && it.duration < b - aIn) log("UYARI: " + sc.id + " videosu sahneden kısa (" + it.duration.toFixed(2) + " sn < " + (b - aIn).toFixed(2) + " sn)");
+    applyMove(L, sc.move, cover(it, W, H), aIn, b);
+  } else if (frame === "circle" || frame === "polaroid") {
+    var bgIt = sc.bg ? imp(sc.bg) : null;
+    if (bgIt) { var BG = comp.layers.add(bgIt); span(BG, aIn, b + 0.02); applyMove(BG, "push_in", cover(bgIt, W, H), aIn, b); }
+    else { blurredCopy(it, aIn, b + 0.02); }
+    var NUL = comp.layers.addNull(DUR); NUL.name = sc.id + "_grp"; span(NUL, aIn, b + 0.02);
+    P(NUL, "ADBE Position").setValue([W / 2, H * 0.46]);
+    var cy = H * 0.46;
+    if (frame === "circle") {
+      var dia = W * 0.78;
+      var ring = shapeEllipse(sc.id + "_ring", dia + 46, null, D.colors.white, 3).layer; span(ring, aIn, b + 0.02);
+      P(ring, "ADBE Position").setValue([W / 2, cy]); P(ring, "ADBE Opacity").setValue(70);
+      L = comp.layers.add(it); L.name = sc.id; span(L, aIn, b + 0.02);
+      P(L, "ADBE Position").setValue([W / 2, cy]);
+      var s0 = cover(it, dia, dia);
+      applyMove(L, sc.move === "parallax" ? "push_in" : sc.move, s0, aIn, b, W / 2, cy);
+      var m = shapeEllipse(sc.id + "_matte", dia, [1, 1, 1]).layer; span(m, aIn, b + 0.02);
+      P(m, "ADBE Position").setValue([W / 2, cy]);
+      setMatte(L, m);
+      ring.parent = NUL; m.parent = NUL; L.parent = NUL;
+    } else {
+      var cw = W * 0.66, ch = cw * 1.18, iw = cw * 0.88, ih = iw;
+      var card = shapeRect(sc.id + "_card", cw, ch, [0.97, 0.96, 0.93], 6).layer; span(card, aIn, b + 0.02);
+      P(card, "ADBE Position").setValue([W / 2, cy]);
+      var ds = fx(card, "ADBE Drop Shadow"); var dsd = fp(ds, "ADBE Drop Shadow-0005", 5); if (dsd) dsd.setValue(40); var dso = fp(ds, "ADBE Drop Shadow-0002", 2); if (dso) dso.setValue(140);
+      var icy = cy - (ch - ih) / 2 + cw * 0.06;
+      L = comp.layers.add(it); L.name = sc.id; span(L, aIn, b + 0.02);
+      P(L, "ADBE Position").setValue([W / 2, icy]);
+      applyMove(L, "push_in", cover(it, iw, ih), aIn, b, W / 2, icy);
+      var pm = shapeRect(sc.id + "_matte", iw, ih, [1, 1, 1], 0).layer; span(pm, aIn, b + 0.02);
+      P(pm, "ADBE Position").setValue([W / 2, icy]);
+      setMatte(L, pm);
+      card.parent = NUL; pm.parent = NUL; L.parent = NUL;
+      if (sc.label) {
+        var lab = addText(sc.label, { size: 44, rgb: [0.15, 0.13, 0.12], font: D.fonts.title, x: W / 2, y: cy + ch / 2 - cw * 0.1 });
+        span(lab, aIn, b + 0.02); lab.parent = NUL;
+      }
+      key(P(NUL, "ADBE Rotate Z"), aIn, sc.tilt !== undefined ? sc.tilt - 4 : -9);
+      key(P(NUL, "ADBE Rotate Z"), aIn + 0.4, sc.tilt !== undefined ? sc.tilt : -4);
+      easeAll(P(NUL, "ADBE Rotate Z"), 70);
+    }
+    popIn(NUL, aIn, 70);
+    sfx(D.sfx_map.pop, aIn, -8);
+  } else if (frame === "split") {
+    // split: sol yarı sc.image, sağ yarı sc.image2, ortada parlayan çizgi
+    var it2 = imp(sc.image2);
+    L = comp.layers.add(it); L.name = sc.id + "_A"; span(L, aIn, b + 0.02);
+    applyMove(L, "pan_right", cover(it, W, H), aIn, b);
+    if (it2) {
+      var L2 = comp.layers.add(it2); L2.name = sc.id + "_B"; span(L2, aIn, b + 0.02);
+      applyMove(L2, "pan_left", cover(it2, W, H), aIn, b);
+      var half = shapeRect(sc.id + "_half", W * 0.5 + 400, H * 1.4, [1, 1, 1], 0).layer; span(half, aIn, b + 0.02);
+      P(half, "ADBE Position").setValue([W * 0.75 + 200, H / 2]); P(half, "ADBE Rotate Z").setValue(8);
+      setMatte(L2, half);
+      var line = shapeRect(sc.id + "_line", 8, H * 1.4, [1, 1, 1], 0).layer; span(line, aIn, b + 0.02);
+      P(line, "ADBE Position").setValue([W / 2, H / 2]); P(line, "ADBE Rotate Z").setValue(8);
+      var gl = fx(line, "ADBE Glo2");
+    }
+  }
+
+  // ---- geçiş (sahnenin başında, ayar katmanıyla iki sahneyi birlikte etkiler)
+  if (i > 0 && tr !== "cut") {
+    sfx(D.sfx_map.transition, a - 0.12, -10);
+    if (tr === "blur_whip" || tr === "slide_up") {
+      var A = adj("TR whip " + sc.id, a - 0.14, a + 0.22);
+      var off = fx(A, "ADBE Offset"); var oc = fp(off, "ADBE Offset-0001", 1);
+      var db = fx(A, "ADBE Motion Blur"); var dir = fp(db, "ADBE Motion Blur-0001", 1); var len = fp(db, "ADBE Motion Blur-0002", 2);
+      if (dir) dir.setValue(0);
+      // Offset görüntüyü sarar: tam H kaydırma = aynı görüntü, böylece sonda sıçrama olmaz
+      key(oc, a - 0.14, [W / 2, H / 2]); key(oc, a, [W / 2, H / 2 + H * 0.5]); key(oc, a + 0.22, [W / 2, H / 2 + H]);
+      key(len, a - 0.14, 0); key(len, a, 220); key(len, a + 0.22, 0);
+      easeAll(oc, 80);
+    } else if (tr === "zoom_blur") {
+      var Z = adj("TR zoom " + sc.id, a - 0.15, a + 0.2);
+      var gb = fx(Z, "ADBE Gaussian Blur 2"); var gbp = fp(gb, "ADBE Gaussian Blur 2-0001", 1);
+      key(gbp, a - 0.15, 0); key(gbp, a, 60); key(gbp, a + 0.2, 0);
+      var rb = fx(Z, "ADBE Radial Blur"); var rba = fp(rb, "ADBE Radial Blur-0001", 1); var rbt = fp(rb, "ADBE Radial Blur-0003", 3);
+      if (rbt) { try { rbt.setValue(2); } catch (e) {} }
+      key(rba, a - 0.15, 0); key(rba, a, 70); key(rba, a + 0.2, 0);
+    } else if (tr === "flash") {
+      var F = solid([1, 1, 1], "TR flash " + sc.id, a - 0.06, a + 0.14);
+      F.blendingMode = BlendingMode.ADD;
+      var fo = P(F, "ADBE Opacity"); key(fo, a - 0.06, 0); key(fo, a, 100); key(fo, a + 0.14, 0);
+    } else if (tr === "fade" || tr === "light_leak" || tr === "circle_reveal") {
+      if (tr === "circle_reveal" && frame === "full") {
+        var cmo = shapeEllipse(sc.id + "_reveal", 10, [1, 1, 1]); var cm = cmo.layer; span(cm, aIn, b + 0.02);
+        var es = cmo.ellipse.property("ADBE Vector Ellipse Size");
+        key(es, aIn, [0, 0]); key(es, a + 0.05, [H * 1.3, H * 1.3]); easeAll(es, 75);
+        setMatte(L, cm);
+      } else {
+        var op = P(L, "ADBE Opacity"); key(op, aIn, 0); key(op, a, 100);
+      }
+      if (tr === "light_leak") {
+        var LK = solid([1, 0.55, 0.15], "TR leak " + sc.id, a - 0.5, a + 0.55);
+        LK.blendingMode = BlendingMode.SCREEN;
+        var rp = fx(LK, "ADBE Ramp");
+        var r1 = fp(rp, "ADBE Ramp-0001", 1), r2 = fp(rp, "ADBE Ramp-0002", 2), r3 = fp(rp, "ADBE Ramp-0003", 3), r4 = fp(rp, "ADBE Ramp-0004", 4), r5 = fp(rp, "ADBE Ramp-0005", 5);
+        if (r5) { try { r5.setValue(2); } catch (e) {} }
+        if (r2) r2.setValue([1, 0.62, 0.25]); if (r4) r4.setValue([0, 0, 0]);
+        key(r1, a - 0.5, [W * 0.1, H * 0.2]); key(r1, a + 0.55, [W * 0.9, H * 0.45]);
+        if (r3) r3.setValue([W * 1.1, H * 0.9]);
+        var lo = P(LK, "ADBE Opacity"); key(lo, a - 0.5, 0); key(lo, a, 85); key(lo, a + 0.55, 0); easeAll(lo, 50);
+      }
+    }
+  }
+
+  // ---- sahne başlığı
+  if (sc.title) {
+    var t = sc.title, ta = a + (t.delay || 0.08), tb = t.until ? a + t.until : b;
+    var TL = addText(t.text, { size: t.size, rgb: t.rgb, font: t.font, x: W / 2, y: t.y, tracking: t.tracking || 0, leading: t.size * 0.95 });
+    TL.name = "TITLE " + sc.id; span(TL, ta, tb);
+    var sh = fx(TL, "ADBE Drop Shadow");
+    var sho = fp(sh, "ADBE Drop Shadow-0002", 2); if (sho) sho.setValue(160);
+    var shs = fp(sh, "ADBE Drop Shadow-0005", 5); if (shs) shs.setValue(18);
+    if (t.rotate) P(TL, "ADBE Rotate Z").setValue(t.rotate);
+    if (t.anim === "slam" || t.anim === "stamp") {
+      var tsc = P(TL, "ADBE Scale"), top = P(TL, "ADBE Opacity");
+      key(tsc, ta, [260, 260]); key(tsc, ta + 0.16, [96, 96]); key(tsc, ta + 0.24, [100, 100]);
+      key(top, ta, 0); key(top, ta + 0.06, 100); easeAll(tsc, 85);
+      var tbl = fx(TL, "ADBE Motion Blur"); var tbll = fp(tbl, "ADBE Motion Blur-0002", 2);
+      key(tbll, ta, 80); key(tbll, ta + 0.16, 0);
+      sfx(t.anim === "stamp" ? D.sfx_map.stamp : D.sfx_map.slam, ta, -6);
+      if (t.anim === "stamp") {
+        if (!t.rotate) P(TL, "ADBE Rotate Z").setValue(-6);
+        var box = shapeRect("STAMP box " + sc.id, 100, 100, null, 0, t.rgb, 7); span(box.layer, ta, tb);
+        box.rect.property("ADBE Vector Rect Size").expression = 'var t=thisComp.layer("' + TL.name + '");var r=t.sourceRectAtTime(time,false);[r.width+60,r.height+36]';
+        P(box.layer, "ADBE Position").expression = 'thisComp.layer("' + TL.name + '").transform.position';
+        P(box.layer, "ADBE Rotate Z").expression = 'thisComp.layer("' + TL.name + '").transform.rotation';
+        P(box.layer, "ADBE Scale").expression = 'thisComp.layer("' + TL.name + '").transform.scale';
+        P(box.layer, "ADBE Opacity").expression = 'thisComp.layer("' + TL.name + '").transform.opacity';
+      }
+    } else if (t.anim === "pop") {
+      popIn(TL, ta, 0); sfx(D.sfx_map.pop, ta, -8);
+    } else if (t.anim === "type") {
+      typeOn(TL, ta, Math.min(0.9, (tb - ta) * 0.6)); sfx(D.sfx_map.type, ta, -10);
+    } else {
+      var fo2 = P(TL, "ADBE Opacity"); key(fo2, ta, 0); key(fo2, ta + 0.3, 100);
+      var fs2 = P(TL, "ADBE Scale"); key(fs2, ta, [94, 94]); key(fs2, tb, [104, 104]);
+    }
+    // çıkış
+    var outO = P(TL, "ADBE Opacity"); key(outO, Math.max(ta + 0.3, tb - 0.1), 100); key(outO, tb, 0);
+  }
+}
+
+// ---- outro / CTA
+if (D.outro) {
+  var o = D.outro, oa = o.start, ob = o.end;
+  var oit = imp(o.image);
+  if (oit) { var OL = comp.layers.add(oit); OL.name = "OUTRO"; span(OL, oa, ob); applyMove(OL, "push_in", cover(oit, W, H), oa, ob); }
+  else { solid(D.colors.black, "OUTRO bg", oa, ob); }
+  for (var k = 0; k < o.lines.length; k++) {
+    var ol = addText(o.lines[k], { size: k === 0 ? 120 : 64, rgb: k === 0 ? D.colors.yellow : D.colors.white, font: k === 0 ? D.fonts.title : D.fonts.caption, x: W / 2, y: H * (0.40 + k * 0.09) });
+    span(ol, oa + 0.15 + k * 0.25, ob); popIn(ol, oa + 0.15 + k * 0.25, 0);
+  }
+  sfx(D.sfx_map.slam, oa + 0.15, -6);
+}
+
+// ---- altyazılar
+var CAPS = [];
+for (var c = 0; c < D.captions.length; c++) {
+  var cp = D.captions[c];
+  if (D.cap.mode === "none") break;
+  var ca = cp.start, cb = Math.max(cp.end, ca + 0.18);
+  var CL = addText(cp.text, { size: D.cap.size, rgb: D.cap.rgb, font: D.cap.font, x: W / 2, y: D.cap.y, tracking: D.cap.mode === "word" ? 10 : 0 });
+  CL.name = "CAP " + c; span(CL, ca, cb);
+  for (var r = 0; r < cp.key.length; r++) colorRange(CL, cp.key[r][0], cp.key[r][1], D.cap.key_rgb);
+  if (D.cap.mode === "pill") {
+    var pill = shapeRect("CAP pill " + c, 100, 60, D.cap.pill_rgb, 14); span(pill.layer, ca, cb);
+    pill.rect.property("ADBE Vector Rect Size").expression = 'var t=thisComp.layer("' + CL.name + '");var r=t.sourceRectAtTime(time,false);[r.width+44,r.height+26]';
+    P(pill.layer, "ADBE Position").expression = 'thisComp.layer("' + CL.name + '").transform.position';
+    P(pill.layer, "ADBE Opacity").setValue(D.cap.pill_opacity);
+    pill.layer.moveAfter(CL);
+  } else {
+    // hex: tek kelime, yumuşak belirme + hafif büyüme; anahtar kelime daha büyük
+    var big = cp.key.length > 0;
+    var wsc = P(CL, "ADBE Scale"), wop = P(CL, "ADBE Opacity");
+    var base = big ? 140 : 100;
+    key(wsc, ca, [base * 0.92, base * 0.92]); key(wsc, cb, [base, base]);
+    key(wop, ca, 0); key(wop, ca + 0.07, 100);
+    var gl2 = fx(CL, "ADBE Drop Shadow"); var g2o = fp(gl2, "ADBE Drop Shadow-0002", 2); if (g2o) g2o.setValue(120); var g2s = fp(gl2, "ADBE Drop Shadow-0005", 5); if (g2s) g2s.setValue(25);
+  }
+}
+
+// ---- grad / doku (en üstte, altyazıların altında kalması için sonra altyazıları üste taşıyoruz)
+var G = D.grade;
+var GR = adj("GRADE", 0, DUR);
+if (G.tint > 0) {
+  var tn = fx(GR, "ADBE Tint");
+  var t1 = fp(tn, "ADBE Tint-0001", 1), t2 = fp(tn, "ADBE Tint-0002", 2), t3 = fp(tn, "ADBE Tint-0003", 3);
+  if (t1) t1.setValue([0.10, 0.07, 0.04]); if (t2) t2.setValue([1.0, 0.93, 0.80]); if (t3) t3.setValue(G.tint);
+}
+if (G.noise > 0) { var nz = fx(GR, "ADBE Noise"); var nza = fp(nz, "ADBE Noise-0001", 1); if (nza) nza.setValue(G.noise); }
+if (G.vignette > 0) {
+  var V = solid([0, 0, 0], "VIGNETTE", 0, DUR);
+  var mk = V.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
+  var sh2 = new Shape(); var rx = W * 0.62, ry = H * 0.58, kx = rx * 0.5523, ky = ry * 0.5523, cx = W / 2, cy2 = H / 2;
+  sh2.vertices = [[cx, cy2 - ry], [cx + rx, cy2], [cx, cy2 + ry], [cx - rx, cy2]];
+  sh2.inTangents = [[-kx, 0], [0, -ky], [kx, 0], [0, ky]];
+  sh2.outTangents = [[kx, 0], [0, ky], [-kx, 0], [0, -ky]];
+  sh2.closed = true;
+  mk.property("ADBE Mask Shape").setValue(sh2);
+  mk.inverted = true;
+  mk.property("ADBE Mask Feather").setValue([W * 0.35, W * 0.35]);
+  P(V, "ADBE Opacity").setValue(G.vignette);
+}
+if (G.light_leak_every > 0) {
+  for (var lt = 1.5; lt < DUR - 1; lt += G.light_leak_every) {
+    var LL = solid([1, 0.6, 0.2], "LEAK " + lt.toFixed(1), lt, lt + 1.2);
+    LL.blendingMode = BlendingMode.SCREEN;
+    var rp2 = fx(LL, "ADBE Ramp"); var q5 = fp(rp2, "ADBE Ramp-0005", 5); if (q5) { try { q5.setValue(2); } catch (e) {} }
+    var q2 = fp(rp2, "ADBE Ramp-0002", 2); if (q2) q2.setValue([1, 0.7, 0.35]); var q4 = fp(rp2, "ADBE Ramp-0004", 4); if (q4) q4.setValue([0, 0, 0]);
+    var q1 = fp(rp2, "ADBE Ramp-0001", 1); key(q1, lt, [W * 1.05, H * 0.1]); key(q1, lt + 1.2, [W * 0.75, H * 0.35]);
+    var q3 = fp(rp2, "ADBE Ramp-0003", 3); if (q3) q3.setValue([W * 0.2, H * 0.9]);
+    var llo = P(LL, "ADBE Opacity"); key(llo, lt, 0); key(llo, lt + 0.5, 55); key(llo, lt + 1.2, 0); easeAll(llo, 50);
+  }
+}
+// altyazı ve başlıkları gradın üstüne taşı (okunaklı kalsın)
+// (önce listeye al: taşırken indeksler kayar)
+var tops = [], boxes = [];
+for (var li = comp.numLayers; li >= 1; li--) {
+  var ly = comp.layer(li), nm = ly.name;
+  if (nm.indexOf("CAP pill ") === 0 || nm.indexOf("STAMP box ") === 0) boxes.push(ly);
+  else if (nm.indexOf("CAP ") === 0 || nm.indexOf("TITLE ") === 0) tops.push(ly);
+}
+for (var ti = 0; ti < tops.length; ti++) tops[ti].moveToBeginning();
+// kutular kendi metinlerinin hemen altında kalsın
+for (var bi = 0; bi < boxes.length; bi++) {
+  var bx = boxes[bi], bn = bx.name;
+  try {
+    if (bn.indexOf("CAP pill ") === 0) bx.moveAfter(comp.layer("CAP " + bn.substr(9)));
+    else bx.moveAfter(comp.layer("TITLE " + bn.substr(10)));
+  } catch (e) { log("kutu sırası: " + e); }
+}
+
+// ---- ses
+if (D.vo) { var vit = imp(D.vo); if (vit) { var VL = comp.layers.add(vit); VL.name = "VO"; VL.startTime = 0; } }
+if (D.music) {
+  var mit = imp(D.music);
+  if (mit) {
+    var ML = comp.layers.add(mit); ML.name = "MUSIC"; ML.startTime = 0; span(ML, 0, DUR);
+    var lv = ML.property("ADBE Audio Group").property("ADBE Audio Levels");
+    key(lv, 0, [D.music_db, D.music_db]); key(lv, Math.max(0, DUR - 1.2), [D.music_db, D.music_db]); key(lv, DUR, [-60, -60]);
+  }
+}
+
+// ---- render kuyruğu + kaydet
+var rq = proj.renderQueue.items.add(comp);
+var om = rq.outputModule(1);
+var tpls = [D.render.om_template, "H.264 - Match Render Settings - 15 Mbps", "H.264 - Match Render Settings - 40 Mbps", "H.264"];
+var okT = false;
+for (var q = 0; q < tpls.length && !okT; q++) { if (!tpls[q]) continue; try { om.applyTemplate(tpls[q]); okT = true; log("çıktı şablonu: " + tpls[q]); } catch (e) {} }
+if (!okT) log("H.264 çıktı şablonu bulunamadı; AE varsayılanıyla render alınacak (AE 2023+ önerilir)");
+om.file = new File(D.render.mp4);
+proj.save(new File(D.render.aep));
+log("TAMAM: " + comp.numLayers + " katman, " + sfxCount + " ses efekti, süre " + DUR.toFixed(2) + " sn");
+log("aep: " + D.render.aep);
+app.endUndoGroup();
+if (D.render.render_now) { proj.renderQueue.render(); log("render bitti: " + D.render.mp4); }
+} catch (err) {
+  log("HATA (satır " + (err.line || "?") + "): " + err.toString());
+}
+flushLog();
+})();
+"""
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("timeline")
+    ap.add_argument("-o", "--out", default="build/build.jsx")
+    ap.add_argument("--aep", default="build/reel.aep")
+    ap.add_argument("--mp4", default="build/reel.mp4")
+    ap.add_argument("--render-now", action="store_true", help="betik sonunda AE içinde render al (aerender yerine)")
+    ap.add_argument("--om-template", default="", help="AE çıktı modülü şablonu adı (boşsa H.264 şablonları denenir)")
+    a = ap.parse_args()
+    tl = json.loads(Path(a.timeline).read_text(encoding="utf-8"))
+    D = prepare(tl, a.aep, a.mp4, a.render_now, a.om_template)
+    Path(a.out).parent.mkdir(parents=True, exist_ok=True)
+    # ExtendScript dosyayı BOM'lu UTF-8 okursa Türkçe karakterler bozulmaz
+    js = "var D = " + json.dumps(D, ensure_ascii=False, indent=0) + ";\n" + JS
+    Path(a.out).write_text("\ufeff" + js, encoding="utf-8")
+    print(f"{a.out} yazıldı ({len(D['scenes'])} sahne, {len(D['captions'])} altyazı, {D['dur']:.1f} sn)")
+    print(f"log: {D['render']['log']}")
+
+
+if __name__ == "__main__":
+    main()

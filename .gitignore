@@ -1,0 +1,9 @@
+projeler/
+build/
+__pycache__/
+*.pyc
+.DS_Store
+*.aep
+*.mp4
+*.mp3
+*.wav
