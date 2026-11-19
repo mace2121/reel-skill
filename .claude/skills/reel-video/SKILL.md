@@ -19,7 +19,9 @@ Görünümün özeti (ayrıntı `references/stil-rehberi.md`):
 İki stil ailesi var: **earn** (varsayılan; yukarıdaki görünüm; örnek `examples/tahir-elci`) ve **hex** (1900 öncesi
 tarih, icat, biyografi: sıcak yağlı boya tablolar + dönemin gerçek belgeleri, kayan ışık huzmeleri, sahneye gömülü
 italik yazı, yavaş tempo; örnek `examples/el-cezeri`, ayrıntı `stil-rehberi.md` sonu). Kullanıcı söylemezse konuya
-göre seç ve söyle. Kullanıcı yeni referans kareleri verirse önce `frame_sheets.py` ile **tamamını** incele ve
+göre seç ve söyle; `stil-rehberi.md` sonundaki **alt tür** tablosundan (olay, dava, ekonomi, sanat, arşiv, gravür)
+birini seç. Her videoda şunlar bulunsun: işaretleme öğeleri (`marks` / `labels`), 2–4 yazı kartı (`make_card.py`), en az 3
+farklı geçiş (`iris`, `wipe_up` dahil), bir belge ya da gazete sahnesi, dev yıl / sayı yazısı. Kullanıcı yeni referans kareleri verirse önce `frame_sheets.py` ile **tamamını** incele ve
 `analiz.md`'ye işle. Video dili her zaman Türkçe.
 
 ## Çıktı klasörü
