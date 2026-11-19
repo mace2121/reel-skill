@@ -13,6 +13,8 @@ aktaramaz ve render alamaz** (izinli script listesinde yok). Bu yüzden:
 4. Render `aerender` ile alınır.
 
 ## build.jsx üret ve çalıştır
+AE yolları: repo kökündeki `ae-yollari.json` (kurulum scriptinin yazdığı `afterfx` / `aerender`) varsa onu kullan.
+
 ```bash
 python3 $S/build_ae_jsx.py timeline.json -o build/build.jsx --aep build/reel.aep --mp4 build/reel.mp4
 ```

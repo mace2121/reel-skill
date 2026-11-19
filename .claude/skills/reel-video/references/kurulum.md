@@ -19,7 +19,16 @@ Repo klasöründe Claude Code açarsan skill `.claude/skills/` altından zaten y
 - (isteğe bağlı) [rea-video](https://github.com/JuneYaooo/rea-video) — kalite kontrolü ve yeni referans analizi
 
 ## 3. After Effects + after-effects-mcp
-After Effects 2023 veya sonrası (H.264 render için). Sonra:
+After Effects 2023 veya sonrası (H.264 render için).
+
+**Windows, tek komut** (reel-skill klasöründe; Git ve Node.js 18+ gerekir):
+```powershell
+powershell -ExecutionPolicy Bypass -File kurulum\ae-mcp-kur.ps1
+```
+Script: indirir, derler, köprü panelini AE'ye kopyalar (yönetici izni ister), Claude Code'a `AfterEffectsMCP`
+olarak ekler ve AE yollarını `ae-yollari.json`'a yazar (`afterfx`, `aerender` — skill render komutlarında bunu kullanır).
+
+Elle kurulum:
 ```bash
 git clone https://github.com/Dakkshin/after-effects-mcp.git
 cd after-effects-mcp
