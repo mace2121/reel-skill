@@ -7,7 +7,7 @@ Kanal: **Amed Güncel** (@amedguncel, "Diyarbakır'ın sesi ve hafızası"). Sor
 | Başlık fontu | Amed başlık fontu, PostScript adı `AmedBaslikAnton-Regular` (`assets/fonts/`; `~/Library/Fonts`'ta kurulu olmalı) | `"fonts": {"title": "AmedBaslikAnton-Regular"}` |
 | Altyazı fontu | Poppins SemiBold; dağınık kelime / alt satır için Playfair Display Italic | stil varsayılanı |
 | Kapanış | "Takip et" kartı **yok**; kanal animasyonu (logo + @amedguncel + "Takip Ediliyor"), 3,3 sn | `"outro": {"duration": 3.3, "video": "$SKILL/assets/marka/outro_amed.mp4", "text": []}` |
-| Genel doku | Halftone tüm videonun üstünde (multiply %85) + toz + çizik + gren | `look.overlays` (aşağıda) |
+| Genel doku | earn: halftone tüm videonun üstünde (multiply %85) + toz + çizik + gren. hex: halftone yok; ışık huzmesi + toz + gren | `look.overlays` (aşağıda) |
 | Sis | Tam ekran ve katmanlı sahnelerde alt kenarda | `look.fog`, sahnede `"fog": 0.5–0.9` |
 | Geçiş sesi | Varsayılan yüksek bulundu, yarıya indirildi | `look.transition_db: -16` |
 | Parlama (glow) | Kapalı (renkleri patlatıyor) | `look.glow` yazma |
@@ -28,6 +28,12 @@ Hazır `look` bloğu:
 }
 ```
 
+## Araç tercihleri
+Kullanıcı videoya göre araç söyleyebilir; söylediği araçlar o video için onay sayılır (yine de harcamayı raporla).
+- El Cezerî videosunda: görsel üretimi ve arka plan silme **Higgsfield** (`generate_image_batch`, model `gpt_image_2_6`,
+  görsel başı 0,25 kredi; `remove_background`), ses **Magnific** (`audio_tts` ElevenLabs sesleriyle, müzik, efekt).
+- Magnific seslendirme sesi: "Kerem Şahin" (derin, belgesel; `audio_voices_list` ile kimliğini al). Önce `audio_tts_direction`.
+
 ## Kullanıcının tekrar tekrar istedikleri
 - **Gerçek görüntü:** olay yeri, kişi, mekân internette varsa onu kullan; kendi bulduğu fotoğrafı gönderirse o sahneye koy.
 - **Katmanlı sahne:** arka plan siyah-beyaz + halftone, konu kesilip renkli ve konturlu öne çıkar; başlık arka plan ile
@@ -43,4 +49,4 @@ Hazır `look` bloğu:
 - `vhs-retro-vintage-and-scratch-grain-texture-backg-…/(Footage)/03.Others/Texture/` — kağıt, gren, VHS, hasar dokuları
 - `Grunge Halftone Overlay Textures/(Footage)/03.Others/` — halftone klipleri, toz, çizik
 - `Atmospheric Fog Transitions …/…/FOG/` ve `Cinematic Fog Overlays/(Footage)/Footages/` — zemin sisi, ortam dumanı
-- Kanal kapanışı `AmedGuncel_AhmetKaya_BirSesinHikayesi_9x16.mp4` videosunun 53,28. saniyesinden kesildi.
+- Kanal kapanışı `AmedGuncel_AhmetKaya_BirSesinHikayesi_9x16.mp4` videosunun 53,40. saniyesinden kesildi (daha erkeni önceki sahnenin silik görüntüsünü taşıyor; yeni bir kapanış klibi keserken ilk 4 kareye mutlaka bak).

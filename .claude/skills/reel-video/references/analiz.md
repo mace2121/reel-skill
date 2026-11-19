@@ -48,3 +48,16 @@ incelemede hepsinin **AI durağan görsel + AE hareketi + motion graphics** oldu
 Her karede: halftone / gren dokusu, yumuşak odak, vinyet, sis; hiçbir kare 1,5 sn'den uzun hareketsiz kalmıyor.
 Bizde karşılığı olmayanlar (istenirse eklenebilir): altıgen geçiş, sahneler arası kalıcı başlık, hareketli vektör
 nesneler, renk → siyah-beyaz sahne içi dönüş.
+
+## Kare kare inceleme: hex_creatives "anestezi" (1.468 kare, 49 sn) ve "Colt" (1.843 kare, 77 sn)
+
+| Gözlem | Anestezi | Colt |
+|---|---|---|
+| Görsel | Siyah-beyaz gravür / eski fotoğraf görünümü; tek renk vurgu (kırmızı kan, sarı sıvı) | Sıcak turuncu-sepya yağlı boya; mavi deniz, yeşil şerit gibi sınırlı renk |
+| Kamera | Kesilmiş figürlerle yavaş 3B parallax; aynı sahnenin yakın / uzak yeniden kadrajı; odak kaydırma | Aynı; nesneler (dümen, top) sahne içinde döner |
+| Işık | Çapraz pencere ışığı huzmesi, kadrajı yıkayan beyaz geçiş, kenarda bulanık ön plan gölgeleri | Sürekli kayan dikey sıcak ışık bantları, film yanığı |
+| Yazı | Sahnenin içinde küçük serif öbek, kelime kelime; anahtar kelime büyük italik; hap yok | Aynı + koyu yeşil şerit üstünde isim / yıl etiketi |
+| Ara sahne | Beyaz ışık içinde yıl ("On October 16th, 1846") | Eski kağıt + silik tabanca çizimleri + daire içinde cümle; ahşap masada belge |
+| Vurgu | Sarı çizgiyle izlenen hortum | Sarı çizgiyle izlenen ufuk / süvari hattı |
+| Tempo | 24 sahne, ağır anlatım | 22 sahne, ağır anlatım |
+| Kapanış | Bugünkü bina ("still stands today") | Belge (sipariş formu) |

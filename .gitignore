@@ -11,6 +11,8 @@ ae-yollari.json
 
 # kanal kapanış klibi repoda kalır (genel *.mp4 kuralının istisnası)
 !.claude/skills/reel-video/assets/marka/*.mp4
+# hex stilinin ışık huzmesi dokusu betikle üretildi (scripts/make_shafts.py), lisans sorunu yok
+!.claude/skills/reel-video/assets/hex/*.mp4
 # lisanslı paketlerden hazırlanan doku / sis dosyaları repoya girmez (bkz. assets/doku/README.md)
 .claude/skills/reel-video/assets/doku/*
 !.claude/skills/reel-video/assets/doku/README.md

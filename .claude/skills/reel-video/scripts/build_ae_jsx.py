@@ -30,7 +30,8 @@ def tr_upper(s):
 
 
 def prepare(tl, aep, mp4, render_now, om_template):
-    st = resolve(tl.get("style", "earn"), {"fonts": tl.get("fonts") or {}})
+    st = resolve(tl.get("style", "earn"), {"fonts": tl.get("fonts") or {}, "caption": tl.get("caption") or {},
+                                           "grade": tl.get("grade") or {}})
     W, H = tl["size"]
     cap = st["caption"]
     scenes = []
@@ -74,7 +75,16 @@ def prepare(tl, aep, mp4, render_now, om_template):
             if w.get("key"):
                 ranges.append([pos, pos + len(w["w"])])
             pos += len(w["w"]) + 1
-        caps.append({"text": text, "start": c["start"], "end": c["end"], "key": ranges})
+        cy = crgb = ckey = None   # sahneye özel altyazı yüksekliği (0-1) ve renkleri (açık zeminli sahneler için)
+        for x in scenes:
+            if x["start"] - 0.05 <= c["start"] < x["end"]:
+                if x.get("caption_y") is not None:
+                    cy = x["caption_y"] * H
+                if x.get("caption_color"):
+                    crgb = color(st, x["caption_color"])
+                if x.get("caption_key_color"):
+                    ckey = color(st, x["caption_key_color"])
+        caps.append({"text": text, "start": c["start"], "end": c["end"], "key": ranges, "y": cy, "rgb": crgb, "key_rgb": ckey})
     out = tl.get("outro")
     if out:
         out = dict(out)
@@ -533,6 +543,15 @@ for (var i = 0; i < D.scenes.length; i++) {
       var fo2 = P(TL, "ADBE Opacity"); key(fo2, ta, 0); key(fo2, ta + 0.3, 100);
       var fs2 = P(TL, "ADBE Scale"); key(fs2, ta, [94, 94]); key(fs2, tb, [104, 104]);
     }
+    if (t.ribbon) {
+      var rbc = t.ribbon_rgb || [0.12, 0.30, 0.27];
+      var rbb = shapeRect("RIBBON " + sc.id, 100, 100, rbc, 0); span(rbb.layer, ta, tb);
+      rbb.rect.property("ADBE Vector Rect Size").expression = 'var t=thisComp.layer("' + TL.name + '");var r=t.sourceRectAtTime(time,false);[r.width+70,r.height+34]';
+      P(rbb.layer, "ADBE Position").expression = 'thisComp.layer("' + TL.name + '").transform.position';
+      P(rbb.layer, "ADBE Rotate Z").setValue(-1.5);
+      var rbo = P(rbb.layer, "ADBE Opacity"); key(rbo, ta, 0); key(rbo, ta + 0.25, 92); key(rbo, Math.max(ta + 0.3, tb - 0.1), 92); key(rbo, tb, 0);
+      rbb.layer.moveAfter(TL);
+    }
     if (D.look && D.look.title_glow) { try { fx(TL, "ADBE Glo2"); } catch (e) {} }
     var SB = null;
     if (t.sub) {
@@ -572,6 +591,7 @@ for (var i = 0; i < D.scenes.length; i++) {
   var sIn = a;
   if (i > 0 && kind !== "same") sIn = t0 - 0.05;
   else if (i > 0 && (tr === "fade" || tr === "light_leak")) sIn = a - LEAD;
+  else if (i > 0 && tr === "wash") sIn = a - 0.14;
   var SL = MAIN.layers.add(SCOMP); SL.name = "SCENE " + sc.id; span(SL, sIn, b + TAIL);
   SL.threeDLayer = true; SL.motionBlur = true;
   P(SL, "ADBE Position").setValue([ST.x, ST.y, ST.z]);
@@ -613,6 +633,11 @@ for (var i = 0; i < D.scenes.length; i++) {
         if (rbt2) { try { rbt2.setValue(2); } catch (e) {} }
         key(rba2, a - 0.1, 0); key(rba2, a, 60); key(rba2, a + 0.3, 0);
       }
+    } else if (tr === "wash") {
+      // hex: sıcak beyaz ışık kadrajı yıkar, altında sahne değişir
+      key(so, a - 0.12, 0); key(so, a + 0.12, 100);
+      var WS = solid(D.look && D.look.wash_rgb ? D.look.wash_rgb : [1, 0.96, 0.86], "TR wash " + sc.id, a - 0.5, a + 0.6); TRL.push(WS);
+      var wso = P(WS, "ADBE Opacity"); key(wso, a - 0.5, 0); key(wso, a, 88); key(wso, a + 0.6, 0); easeAll(wso, 60);
     } else if (tr === "fade" || tr === "light_leak") {
       key(so, a - LEAD, 0); key(so, a, 100);
       if (tr === "light_leak") {
@@ -663,10 +688,17 @@ for (var c = 0; c < D.captions.length; c++) {
   var cp = D.captions[c];
   if (D.cap.mode === "none") break;
   var ca = cp.start, cb = Math.max(cp.end, ca + 0.18);
-  var CL = addText(cp.text, { size: D.cap.size, rgb: D.cap.rgb, font: D.cap.font, x: W / 2, y: D.cap.y, tracking: D.cap.mode === "word" ? 10 : 0 });
+  var CL = addText(cp.text, { size: D.cap.size, rgb: (cp.rgb || D.cap.rgb), font: D.cap.font, x: W / 2, y: (cp.y || D.cap.y), tracking: D.cap.mode === "word" ? 10 : 0 });
   CL.name = "CAP " + c; span(CL, ca, cb);
-  for (var r = 0; r < cp.key.length; r++) colorRange(CL, cp.key[r][0], cp.key[r][1], D.cap.key_rgb);
-  if (D.cap.mode === "pill") {
+  for (var r = 0; r < cp.key.length; r++) colorRange(CL, cp.key[r][0], cp.key[r][1], (cp.key_rgb || D.cap.key_rgb));
+  if (D.cap.mode === "phrase") {
+    // sahneye gömülü serif öbek: kelimeler konuşma hızında, bulanıktan netleşerek belirir
+    wordsOn(CL, ca, Math.max(0.2, (cb - ca) * 0.75));
+    var phs = fx(CL, "ADBE Drop Shadow"); var pho = fp(phs, "ADBE Drop Shadow-0002", 2); if (pho) pho.setValue(cp.rgb ? 0 : 190);
+    try { CL.property("ADBE Effect Parade").property(1).property("ADBE Drop Shadow-0005").setValue(22); CL.property("ADBE Effect Parade").property(1).property("ADBE Drop Shadow-0004").setValue(6); } catch (e) {}
+    var pop2 = P(CL, "ADBE Opacity"); key(pop2, Math.max(ca + 0.1, cb - 0.12), 100); key(pop2, cb, 0);
+    var psc = P(CL, "ADBE Scale"); key(psc, ca, [97, 97]); key(psc, cb, [103, 103]);
+  } else if (D.cap.mode === "pill") {
     var pill = shapeRect("CAP pill " + c, 100, 60, D.cap.pill_rgb, 14); span(pill.layer, ca, cb);
     pill.rect.property("ADBE Vector Rect Size").expression = 'var t=thisComp.layer("' + CL.name + '");var r=t.sourceRectAtTime(time,false);[r.width+44,r.height+26]';
     P(pill.layer, "ADBE Position").expression = 'thisComp.layer("' + CL.name + '").transform.position';

@@ -65,3 +65,24 @@ Video modeli neredeyse hiç gerekmez; hız ve çeşitlilik kurgudan gelir.
 | Kesme / dk | 16–31 | 17–29 |
 | Altyazı satırı | konuşmanın tamamı | her kelime |
 | Efekt sayısı | 16–25 | 16–19 |
+
+## hex: uygulanan görünüm (iki hex_creatives videosunun kare analizinden, El Cezerî videosunda kuruldu)
+
+| Öğe | Nasıl | shotlist'te |
+|---|---|---|
+| Görsel | Sıcak kehribar / sepya **yağlı boya** görünümlü AI tablolar (752x1344 yeterli); dönemin **gerçek belgeleri** (el yazması sayfaları, gravürler; Commons'ta kamu malı) masa üstünde eğik sayfa olarak; sonda bugünkü mekânın gerçek fotoğrafı | `full`, `cutout` |
+| Derinlik | Düz zeminde üretilmiş figür / büst kesilip (Higgsfield `remove_background`) tablo ya da kağıt zeminin önüne konur; kamera sahne boyunca yaklaşır | `cutout` + `dolly: 0.9` |
+| Işık | Yavaşça kayan dikey ışık huzmeleri tüm videoda (`scripts/make_shafts.py`, multiply %48) + toz + gren; halftone yok | `look.overlays` |
+| Yazı | Sahneye gömülü Playfair italik öbekler, kelime kelime belirir; anahtar kelime altın; hap yok. Açık zeminde koyu yazı | `caption_chunks: "phrase"`, `caption.mode: "phrase"`, sahnede `caption_y`, `caption_color` |
+| İsim etiketi | Koyu yeşil şerit üstünde krem italik isim | `title.ribbon: true`, `anim: "fade"`, `keep_case` |
+| Geçiş | Sıcak beyaz ışık yıkaması (`wash`), yumuşak `fade`; belge sayfaları arasında `whip_left` | `transition` |
+| Ara sahne | Eski kağıt zemin + silik çizimler + tek cümle (yıl, soru) | `full` + koyu altyazı |
+| Renk | Tablolar zaten sıcak: sepya tonu düşük, vinyet orta | `grade: {tint: 8, noise: 6, vignette: 38, light_leak_every: 0}` |
+| Tempo | Sahne 1,1–5 sn; anlatım yavaş (Kerem Şahin ≈ 1,9 kelime/sn); 70 kelime ≈ 36 sn | |
+| Kapanış | Konuyu bugüne bağlayan gerçek fotoğraf → son tablo → kanal animasyonu | `outro.video` |
+
+Referanslarda olup henüz olmayanlar: tek renk hareketli vurgular (kırmızı damla, sarı çizgiyle izlenen hortum / ufuk),
+sahne içinde dönen / dolan nesneler (dümen, tabanca topu), aynı tablonun yakın plan yeniden kadrajları, odak kaydırma.
+
+Font notu: Playfair italikte rakamlar eski stil; "800" **"Soo"** gibi okunuyor. hex'te sayıları yazıyla yaz
+("Sekiz yüz yıl önce", "yirmi beş").
