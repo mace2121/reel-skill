@@ -25,3 +25,26 @@ incelemede hepsinin **AI durağan görsel + AE hareketi + motion graphics** oldu
 4. **Ses:** TTS'e benzer anlatıcı, alçak müzik (83–150 BPM), video başına 16–25 efekt; efektlerin çoğu
    yazı girişine ve kesmelere denk.
 5. **Geçiş çeşitliliği:** her 2–4 sn yeni bir geçiş türü; aynı geçiş arka arkaya en fazla 2–3 kez.
+
+## Kare kare inceleme: earn.edits "Halloween" (1.259 kare, 41,9 sn)
+`frame_sheets.py <kare klasörü> -o ref/s --every 4` ile föylenip tamamı incelendi. Görülen teknikler:
+
+| Zaman | Teknik |
+|---|---|
+| 0–1 sn | Kamera aydan kapıya hareket bulanıklığıyla iner; yarasalar, sis, kesilmiş nesne (şeker) ayrı katman |
+| 0,8–3 sn | Başlık çarparak girer; alt satır kelime kelime, bulanıktan netleşerek |
+| 2 sn, 16,5 sn | Geçişte kısa siyah-beyaz + radyal bulanıklık; başlık sahne değişse de ekranda kalır |
+| 3,3 sn | Daire büyüyerek açılan geçiş |
+| 5 sn | Dev kırmızı harfler kadrajdan geçer, sahne renkten siyah-beyaza döner, kırmızı parlayan başlık |
+| 7–10,5 sn | Koyu dokulu kağıt alttan kayar; damga başlık; iğneli polaroidler, kırmızı ip boyunca yana kayan kamera |
+| 10,6 sn | Polaroidin içinden daire açılarak tam ekrana geçiş |
+| 14–16 sn | Kesik çizgili halka içinde bölünmüş daire, arkada sis ve kıvılcım, el yazısı çok satırlı yazı |
+| 17–19 sn | 3B derinlikli başlık; kesilmiş figürler yandan bulanık girer; altıgen desenli geçiş |
+| 22–26 sn | Koyu dokulu zemin, hareketli vektör yarasalar, ortada tek kelime altyazı |
+| 27–31 sn | Sisli koridor; kesilmiş nesne dönerek uçar; kamera kapının içinden geçerek sonraki sahneye |
+| 33–36 sn | Kırmızı parlama → çizikli koyu zemin, dağınık italik kelimeler |
+| 36,6 sn– | Beyaz daire açılır, kanal kapanışı |
+
+Her karede: halftone / gren dokusu, yumuşak odak, vinyet, sis; hiçbir kare 1,5 sn'den uzun hareketsiz kalmıyor.
+Bizde karşılığı olmayanlar (istenirse eklenebilir): altıgen geçiş, sahneler arası kalıcı başlık, hareketli vektör
+nesneler, renk → siyah-beyaz sahne içi dönüş.

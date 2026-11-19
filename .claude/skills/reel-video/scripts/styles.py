@@ -56,7 +56,7 @@ STYLES = {
 
 TRANSITIONS = ["cut", "blur_whip", "zoom_blur", "flash", "fade", "light_leak", "circle_reveal", "slide_up"]
 MOVES = ["static", "push_in", "pull_out", "pan_left", "pan_right", "pan_up", "pan_down", "parallax"]
-FRAMES = ["full", "circle", "polaroid", "split"]
+FRAMES = ["full", "circle", "polaroid", "split", "cutout"]
 TITLE_ANIMS = ["slam", "pop", "type", "fade", "stamp"]
 
 

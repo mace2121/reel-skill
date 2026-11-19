@@ -8,3 +8,9 @@ __pycache__/
 *.mp3
 *.wav
 ae-yollari.json
+
+# kanal kapanış klibi repoda kalır (genel *.mp4 kuralının istisnası)
+!.claude/skills/reel-video/assets/marka/*.mp4
+# lisanslı paketlerden hazırlanan doku / sis dosyaları repoya girmez (bkz. assets/doku/README.md)
+.claude/skills/reel-video/assets/doku/*
+!.claude/skills/reel-video/assets/doku/README.md

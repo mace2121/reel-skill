@@ -1,127 +1,112 @@
 ---
 name: reel-video
-description: Verilen bir konuyu (tarih, gizem, icat, ekonomi, biyografi…) earn.edits / hex_creatives tarzında 40–75 saniyelik dikey (9:16) Türkçe anlatımlı bir reel videoya çevirir ve bitmiş MP4'ü teslim eder. Konu araştırması, Türkçe senaryo, sahne listesi, AI görseller (Magnific / Higgsfield), Türkçe seslendirme + müzik + ses efektleri (ElevenLabs / Magnific), After Effects projesi (ExtendScript + after-effects-mcp) ve render adımlarını kapsar. Kullanıcı "şu konuda video yap", "bunu reel'e çevir", "earn tarzı / hex tarzı video", "tarih videosu üret" dediğinde kullan.
+description: Verilen bir konuyu (tarih, gizem, suç, biyografi, ekonomi…) Amed Güncel için earn.edits tarzında ~30–45 saniyelik dikey (9:16) Türkçe anlatımlı bir reel videoya çevirir ve bitmiş MP4'ü teslim eder. Araştırma, senaryo, gerçek fotoğraf bulma + maskeleme, gerekirse AI görsel (Magnific), seslendirme + müzik + efekt (ElevenLabs / Magnific), After Effects'te 3B kameralı kurgu (ExtendScript) ve render adımlarını kapsar. Kullanıcı "şu konuda video yap", "reel yap", "earn tarzı video", "bunu videoya çevir", "X. saniyedeki kareyi değiştir" dediğinde kullan.
 ---
 
 # reel-video: konudan bitmiş reel'e
 
-Bu skill, 9 referans videonun (`references/analiz.md`) `rea-video decompose` ile çıkarılmış ortak stilini
-yeniden üretir. İki stil ailesi var; ayrıntıları `references/stil-rehberi.md`:
+Bu skill, earn.edits videolarının kare kare incelenmesiyle (`references/analiz.md`) çıkarılan görünümü üretir ve
+kullanıcının kanalı **Amed Güncel**'in tercihlerine göre ayarlıdır (`references/marka.md` — her videoda oku).
 
-| Stil | Ne zaman | Görünüm |
-|---|---|---|
-| **earn** (varsayılan) | Gizem, suç, ekonomi / para, modern tarih, "bunu biliyor muydun" | AI görsel + masa üstü objeler (gazete, polaroid, kara tahta, dosya), kalın sarı / kırmızı başlıklar, hap altyazı, blur-whip geçişler, sonda CTA |
-| **hex** | 1900 öncesi tarih, icatlar, tıp / bilim tarihi, biyografi | Sepya ya da siyah-beyaz gravür / yağlı boya görünümlü AI görseller, yavaş parallax, ışık sızması, ortada tek kelime italik serif altyazı |
+Görünümün özeti (ayrıntı `references/stil-rehberi.md`):
+- **Gerçek fotoğraf önce**, yapay zekâ yalnızca gerçek görüntü bulunamayan yerde ve ekranda "Temsilî görsel" notuyla.
+- **Katmanlı sahneler:** arka plan siyah-beyaz + halftone; konu fotoğraftan maskelenir, renkli ve beyaz konturlu öne
+  çıkar; başlık arka plan ile konu arasında kalır. Pano üstünde iğneli polaroid + kırmızı ip, dağınık kelime kapanışı.
+- **Gerçek 3B kamera:** sahneler uzayda dizilir, kamera aralarında uçar; her katmanda hareket bulanıklığı.
+- **Genel doku:** halftone tüm videonun üstünde; toz, çizik, gren; sahne bazında sis.
+- **Yazı:** Amed başlık fontu, kelime kelime gelen başlıklar, hap altyazı; kapanışta kanal animasyonu.
 
-Kullanıcı stili söylemezse konuya göre seç ve bir cümleyle söyle. Video dili her zaman **Türkçe**.
+İki stil ailesi var: **earn** (varsayılan; yukarıdaki görünüm) ve **hex** (1900 öncesi tarih için sepya gravür,
+ortada tek kelime italik altyazı). Kullanıcı söylemezse earn. Video dili her zaman Türkçe.
 
 ## Çıktı klasörü
 
-Her video kendi klasöründe üretilir (`projeler/<kısa-ad>/`):
-
 ```
 projeler/<ad>/
-  brief.md          konu, stil, süre, kaynaklar
-  script.md         Türkçe anlatım metni
-  shotlist.json     sahne listesi (şema: references/sahne-katalogu.md, örnek: examples/lale/shotlist.json)
-  assets/img/       sahne görselleri (s01.png …)
-  assets/vid/       (isteğe bağlı) görselden üretilen kısa videolar
-  assets/vo.mp3     seslendirme   assets/words.json  kelime zamanları
-  assets/music.mp3  müzik         assets/sfx/*.wav   ses efektleri
+  brief.md          konu, stil, süre, doğrulanan bilgiler, görsel kaynak tablosu
+  script.md         anlatım metni
+  shotlist.json     sahne listesi (şema: references/sahne-katalogu.md, örnek: examples/tahir-elci/shotlist.json)
+  assets/real/      internetten / kullanıcıdan gelen gerçek fotoğraflar + sources.tsv
+  assets/img/       hazırlanmış sahne görselleri (kırpımlar, maskeler, _bg / _fg / _ol katmanları)
+  assets/vo.mp3, words.json, music.mp3, sfx/*.wav
   timeline.json     timeline.py çıktısı
-  build/            preview.mp4, build.jsx, reel.aep, reel.mp4 (TESLİM)
+  build/            build.jsx, reel.aep, reel.mp4 (TESLİM), qc/ (kontrol föyleri)
 ```
+Oturum bir proje klasöründe değilse çalışma klasörü geçicidir: kullanıcıya kalıcı bir klasöre taşımayı öner.
+**Yardımcı dosyaları oturumun geçici (scratchpad) klasörüne koyma** — oturum sırasında silinebiliyor.
 
-Scriptler: `S=<bu skill klasörü>/scripts` (Python 3.10+, Pillow, ffmpeg gerekir).
+Betikler: `S=~/.claude/skills/reel-video/scripts`. Ortak dosyalar shotlist'te `$SKILL/assets/...` diye yazılır.
 
 ## Akış
 
-### 0. Ortam kontrolü
-`references/kurulum.md`'deki kontrol listesini çalıştır: ffmpeg, Python + Pillow, After Effects (+ `aerender`),
-after-effects-mcp bağlantısı (`get-help` aracı yanıt veriyor mu), Magnific / Higgsfield / ElevenLabs bağlayıcıları.
-Eksik olanı kullanıcıya tek satırda söyle, eksikliğe göre yol seç:
-- AE yoksa / ulaşılamıyorsa → teslim `preview_ffmpeg.py` ile tam çözünürlükte yapılır (kalite notu düş).
-- Görsel bağlayıcısı yoksa → kullanıcıdan görsel iste ya da durup bağlamasını iste.
+### 0. Ortam — `references/kurulum.md`
+Python ortamı (Pillow, opencv, faster-whisper), ffmpeg, After Effects + `aerender`, Magnific / ElevenLabs
+bağlayıcıları. Eksik olanı tek satırda söyle. AE yoksa dur ve sor: bu görünüm ffmpeg önizlemesiyle üretilemez.
 
 ### 1. Brief
-Konu, stil, hedef süre (varsayılan earn 40–48 sn, hex 45–65 sn), CTA (varsayılan: "Takip et" + kanalın
-sloganı; kullanıcının markası varsa onu kullan), ses tercihi. Sorulmamış şeyler için varsayılanı kullan,
-gerçekten belirsiz olan tek şeyi sor. `brief.md`'ye yaz.
+Konu, süre (kullanıcı ne dediyse; söylemediyse 30–45 sn), stil. `references/marka.md`'deki varsayılanları
+(font, kapanış, doku, dil hassasiyetleri) sormadan uygula. `brief.md`'ye yaz.
 
 ### 2. Araştırma
-Web'de ara; en az 3 bağımsız kaynakla doğrula. Senaryoda kullanacağın her rakam, tarih, isim kaynağa dayanmalı;
-uyduramazsın. Tartışmalı bilgiyi "iddiaya göre / rivayete göre" diye işaretle. Kaynakları `brief.md`'ye ekle.
+En az 3 bağımsız kaynak; senaryodaki her tarih, rakam ve isim kaynağa dayanır. Tartışmalı ya da yargıya konu olan
+olaylarda kimseyi fail ilan etme, tarafları kötüleyen sıfat kullanma; mahkemenin / kaynakların dediğini aktar.
+Kaynakları `brief.md`'ye ekle.
 
 ### 3. Senaryo — `references/senaryo.md`
-Kanca (ilk 2 sn) → bağlam → gerilim / dönüm → kanıt → sonuç → duygusal kapanış → CTA.
-Türkçe tempo ≈ **2.4 kelime/sn** → 45 sn ≈ 105 kelime. Rakamları seslendirme için yazıyla yaz
-("yüzde doksan", "bin altı yüz otuz yedi"), başlıkta rakam kullan ("%90", "1637"). `script.md`'ye yaz.
+Kanca → bağlam → dönüm → kanıt → sonuç → kapanış cümlesi. Seslendirme bu anlatıcıda ≈ **2,15 kelime/sn** çıkıyor:
+30 sn'lik video için ≈ 58–62 kelime yaz (27 sn anlatım + 3,3 sn kapanış animasyonu). Rakamları yazıyla yaz;
+altyazıda rakam görünsün istiyorsan seslendirmeden **sonra** shotlist'teki `narration`'ı rakama çevir.
 
-### 4. Sahne listesi — `references/sahne-katalogu.md`
-Senaryoyu sahnelere böl: her sahne 1.5–4 sn, bir cümle ya da yarım cümle (`narration`). Sahnelerin
-narration'ları birleşince senaryonun tamamı olmalı (sıra ve kelimeler aynı). Her sahneye: görsel prompt'u,
-çerçeve (`full / circle / polaroid / split`), hareket, geçiş, varsa başlık ve anahtar kelimeler.
-Stil kuralları: earn'de her 2–3 sahnede bir kinetik başlık, en az 2 polaroid / daire çerçeve, geçişlerin çoğu
-blur_whip; hex'te başlık az, çerçeve çoğunlukla full, geçiş light_leak / fade.
+### 4. Görseller — `references/gorsel-uretim.md`
+1. **Gerçek fotoğraf ara:** Wikimedia Commons (lisanslı) + haber sayfalarının kapak görselleri. Kullanıcının
+   gönderdiği fotoğraflar her zaman önceliklidir. Kaynak ve hak durumunu `brief.md` tablosuna yaz.
+2. Bulunamayan sahneler için AI görsel (Magnific); gerçek kişi için referans fotoğrafla.
+3. **Maskele:** katmanlı sahnelerde konuyu Magnific `images_segment` ile kes, `layer_prep.py` ile
+   `_bg / _fg / _ol` katmanlarını üret. Düz zeminli AI figürler için `images_remove_background` + `cutout_prep.py`.
+4. Her hazırlanan görseli **gözle kontrol et** (konu ortada mı, baş kesilmiş mi, logo / filigran kalmış mı).
 
-### 5. Maliyet onayı
-Üretimden önce kullanıcıya listele: görsel sayısı (sahne + yedek), varsa video üretim sayısı, seslendirme karakter
-sayısı, müzik ve efekt üretimi. Kullanıcı onaylamadan **ücretli üretim çağrısı yapma**.
+Gösterme: ölüm anı, ceset, kan. Faili belli olmayan olayda ateş eden kişi üretme.
 
-### 6. Görseller — `references/gorsel-uretim.md`
-Stilin ortak stil bloğu + sahne prompt'u, 9:16. Magnific (`images_generate`) ya da Higgsfield (`generate_image`).
-Her sonucu indirip `assets/img/sXX.png` olarak kaydet ve **gözle kontrol et** (Read): bozuk el / yüz,
-anlamsız yazı, yanlış dönem, stil kayması varsa yeniden üret. Gerekirse en fazla 2–3 sahne için kısa
-görsel→video (`scene.video`); her biri ayrıca onaylı.
+### 5. Sahne listesi — `references/sahne-katalogu.md`
+Sahne 1,5–3,5 sn. Çerçeve ve geçişleri çeşitlendir (aynı geçiş art arda en fazla 2 kez). Tipik dağılım (12 sahne):
+2–3 hizalı cutout (siyah-beyaz arka plan + renkli konu), 3–4 pano polaroidi, 1–2 düz cutout, 1 kolaj, 1 tam ekran,
+1 dağınık kelime kapanışı. Başlık altyazıyı tekrar etmez, özetler. Altyazı bir yüzün üstüne geliyorsa o sahnede
+`"caption": false` yap ve başlıkla anlat.
+
+### 6. Maliyet onayı
+Ücretli her kalemi (görsel, maske, ses, müzik, efekt) kredisiyle listele; kullanıcı onaylamadan üretme. Onaylanan
+bütçenin içinde kalan küçük ek kalemler (maske 35, arka plan silme 3 kredi) için yeniden sorma, sonunda raporla.
+ElevenLabs kotası dar: iki denemeden fazlası sığmayabilir; gerekirse seslendirmeyi Magnific `audio_tts` ile yap.
 
 ### 7. Ses — `references/ses.md`
-1. ElevenLabs ile Türkçe seslendirme (`creative_list_voices` → uygun derin anlatıcı sesi → `creative_generate_speech`,
-   model çok dilli). Takeler arasında en iyisini seç, `assets/vo.mp3`.
-2. Kelime zamanları: `creative_transcribe_audio` (ya da yerelde faster-whisper) → `assets/words.json`.
-   Hiçbiri yoksa timeline.py süreyi harf sayısına göre tahmin eder (daha kaba).
-3. Müzik: stile uygun enstrümantal (earn: gerilimli / dramatik 85–130 BPM; hex: ağır orkestral / piyano).
-4. Efektler: earn → `whoosh, hit, pop, type`; hex → `whoosh_soft, hit_soft, paper, typewriter`.
-   `shotlist.json` → `sfx` alanına yolları yaz.
+Seslendirme (ElevenLabs, "Ogün Can" anlatıcısı) → hedef süreye `atempo` ile oturt → `words.py` ile kelime zamanları
+→ müzik + 4 efekt (Magnific). Efektler `projeler/_ortak/` altında saklanıp yeniden kullanılabilir.
 
-### 8. Zaman çizelgesi
+### 8. Kur ve render al — `references/after-effects.md`
 ```bash
-python3 $S/timeline.py shotlist.json -o timeline.json --words assets/words.json
+bash $S/ae_build.sh projeler/<ad> --render      # timeline -> build.jsx -> AE -> aerender -> ses dengeleme
 ```
-Çıktıdaki sahne sürelerine bak: 6 sn'den uzun sahneyi böl, 1.2 sn'den kısa sahneyi birleştir. Narration'ı
-değiştirdiysen seslendirmeyi yeniden üretmen gerektiğini unutma.
+`build/reel.log.txt` içinde `TAMAM` görmeden devam etme; `HATA (satır N)` çıkarsa `build.jsx`'in o satırına bak.
 
-### 9. Önizleme (AE'den önce)
+### 9. Kare kare kontrol (zorunlu)
 ```bash
-python3 $S/preview_ffmpeg.py timeline.json -o build/preview.mp4 --scale 0.5
-rea-video tiles build/preview.mp4 --start 0 --end <süre> --every 1.5 -o build/tiles.jpg   # varsa
+python3 $S/frame_sheets.py build/reel.mp4 -o build/qc/son --every 6
 ```
-Kareleri gözle kontrol et (altyazı okunuyor mu, başlık görseli kapatıyor mu, sahne-anlatım uyumu).
-Düzelt, tekrar üret. İstersen önizlemeyi kullanıcıya göster.
+Föylerin **hepsine** bak. Sık çıkan kusurlar: başlık kadrajın üstünden taşıyor (kamera yaklaşması), konu başlığın
+Türkçe harf işaretlerini kapatıyor, altyazı yüzün üstünde, polaroidde baş kesik, kapanış klibinin başında önceki
+videodan kare. Düzelt → yeniden kur → yeniden bak. Sesi dinleyemezsin: bunu teslimde açıkça söyle.
 
-### 10. After Effects — `references/after-effects.md`
-```bash
-python3 $S/build_ae_jsx.py timeline.json -o build/build.jsx --aep build/reel.aep --mp4 build/reel.mp4
-"<AE klasörü>/Support Files/AfterFX.exe" -r "<tam yol>/build/build.jsx"      # Windows
-aerender -project build/reel.aep -comp REEL -output build/reel.mp4
-```
-`build/reel.log.txt`'yi oku: `EKSİK DOSYA`, `FONT YOK`, `HATA` satırlarını çöz. Canlı düzeltme ve kontrol için
-after-effects-mcp araçlarını kullan (`getLayerInfo`, `setLayerProperties`, `setLayerKeyframe`,
-`setLayerExpression`); büyük değişikliklerde shotlist'i düzeltip jsx'i yeniden üret (elle yapılan AE
-değişiklikleri yeniden üretimde kaybolur — kullanıcıya söyle).
-
-### 11. Kalite kontrol ve teslim
-- `build/reel.mp4`'ün süresi, çözünürlüğü (1080x1920), sesi var mı (ffprobe).
-- 1.5 sn arayla kare çıkarıp bak; varsa `rea-video decompose build/reel.mp4 -o build/qc --lang en` ile
-  tempo karşılaştır (hedef aralıklar `references/stil-rehberi.md` sonunda).
-- Teslim: MP4 yolu + .aep yolu + kısa özet (süre, sahne sayısı, kullanılan ses, kaynaklar) +
-  kullanıcının elle değiştirebileceği yerler.
+### 10. Teslim ve düzeltme turları
+MP4'ü gönder; kısa özet: süre, değişenler, harcanan kredi, hak durumu belirsiz görseller, doğrulayamadıkların.
+Kullanıcı düzeltmeleri "X. saniyedeki kare" diye tarif eder ve çoğu zaman yeni fotoğraf gönderir: ilgili sahneyi
+`timeline.json`'daki sürelerden bul, yalnızca o sahnenin görselini / alanlarını değiştir, önceki sürümü
+`reel_vN.mp4` olarak sakla, yeniden kur. Sıfırdan başlama.
 
 ## Kurallar
-- Ücretli üretimi (görsel, video, ses, müzik) kullanıcı onayı olmadan başlatma; aynı üretimi "tekrar dene" diye
-  körlemesine yineleme — her çağrı ücretlidir.
-- Gerçek kişilerin yüzlerini aşağılayıcı / yanıltıcı biçimde üretme; tarihî figürler için "portre tarzı"
-  yeterli. Telifli karakter, logo, marka görseli üretme.
-- Referans videolardaki görüntüleri, metinleri, sesleri kopyalama: yalnızca yapı, tempo ve stil taklit edilir.
-- Uydurma bilgi yok; emin olmadığın bilgiyi senaryoya koyma.
-- Kullanıcı bir aşamada geri bildirim verirse ilgili dosyayı (script / shotlist) güncelle ve sonraki adımları
-  yeniden çalıştır; sıfırdan başlama.
+- Ücretli üretimi onaysız başlatma; aynı üretimi körlemesine yineleme.
+- Uydurma bilgi yok. Gerçek ve AI görselleri karıştırırken AI olanı ekranda işaretle.
+- Haber sitelerinden alınan fotoğrafların hak sahibi çoğu zaman belirsizdir: kullan, ama teslimde söyle.
+- Referans videolardan görüntü, metin, ses kopyalama; yalnızca yapı ve teknik.
+- After Effects'te kullanıcının açık projesini asla kapatma / ezme (`ae_build.sh` bunu kontrol eder).
+- Mocha / takip gibi araçlar yalnızca hareketli video görüntüsü varsa anlamlıdır; durağan fotoğrafta önerme.
+- Betiklerde bir hata bulup düzeltirsen ya da yeni bir sahne tipi eklersen `references/` belgelerini de güncelle.

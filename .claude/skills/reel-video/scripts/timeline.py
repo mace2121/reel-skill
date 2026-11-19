@@ -232,7 +232,10 @@ def main():
     shot = json.loads(Path(a.shotlist).read_text(encoding="utf-8"))
     base = Path(a.shotlist).resolve().parent
     # Göreli yolları shotlist klasörüne göre çöz
+    skill_root = Path(__file__).resolve().parent.parent
     def fix(p):
+        if p and str(p).startswith("$SKILL/"):   # skill ile gelen ortak dosyalar (doku, sis, kapanış)
+            return str(skill_root / str(p)[len("$SKILL/"):])
         return str((base / p).resolve()) if p and not Path(p).is_absolute() else p
     shot["voiceover"] = fix(shot.get("voiceover"))
     if shot.get("music"):
@@ -243,9 +246,22 @@ def main():
             sc["image"] = fix(sc["image"])
         if sc.get("video"):
             sc["video"] = fix(sc["video"])
+        for k in ("image2", "bg", "outline"):
+            if sc.get(k):
+                sc[k] = fix(sc[k])
+    if shot.get("outro") and shot["outro"].get("video"):
+        shot["outro"]["video"] = fix(shot["outro"]["video"])
+    lk = shot.get("look") or {}
+    if lk.get("fog"):
+        lk["fog"] = [fix(x) for x in lk["fog"]]
+    if lk.get("backdrop"):
+        lk["backdrop"] = fix(lk["backdrop"])
+    for o in lk.get("overlays", []):
+        o["file"] = fix(o["file"])
     if shot.get("outro") and shot["outro"].get("image"):
         shot["outro"]["image"] = fix(shot["outro"]["image"])
     tl = build(shot, a.words, fix(a.audio) if a.audio else None)
+    tl["look"] = shot.get("look") or {}
     Path(a.out).write_text(json.dumps(tl, ensure_ascii=False, indent=1), encoding="utf-8")
     print(f"{a.out}: {len(tl['scenes'])} sahne, {len(tl['captions'])} altyazı, {tl['duration']:.1f} sn")
     for s in tl["scenes"]:

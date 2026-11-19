@@ -1,0 +1,336 @@
+{
+ "title": "Tahir Elçi Suikastı",
+ "style": "earn",
+ "fps": 30,
+ "size": [
+  1080,
+  1920
+ ],
+ "voiceover": "assets/vo.mp3",
+ "music": {
+  "file": "assets/music.mp3",
+  "db": -19
+ },
+ "sfx": {
+  "whoosh": "assets/sfx/whoosh.wav",
+  "hit": "assets/sfx/hit.wav",
+  "pop": "assets/sfx/pop.wav",
+  "type": "assets/sfx/type.wav"
+ },
+ "look": {
+  "fog": [
+   "$SKILL/assets/doku/fog_low.mp4",
+   "$SKILL/assets/doku/smoke_amb.mp4"
+  ],
+  "overlays": [
+   {
+    "name": "halftone",
+    "file": "$SKILL/assets/doku/halftone.jpg",
+    "blend": "multiply",
+    "opacity": 85
+   },
+   {
+    "name": "dust",
+    "file": "$SKILL/assets/doku/dust.mp4",
+    "blend": "screen",
+    "opacity": 65
+   },
+   {
+    "name": "scratches",
+    "file": "$SKILL/assets/doku/scratches.mp4",
+    "blend": "screen",
+    "opacity": 35
+   },
+   {
+    "name": "grain",
+    "file": "$SKILL/assets/doku/grain.mp4",
+    "blend": "overlay",
+    "opacity": 35
+   }
+  ],
+  "backdrop": "$SKILL/assets/doku/board_bg.jpg",
+  "transition_db": -16
+ },
+ "scenes": [
+  {
+   "id": "s01",
+   "narration": "Barış istedi. Dakikalar sonra başından vuruldu.",
+   "image": "assets/img/v3_s01_fg.png",
+   "transition": "cut",
+   "intro": "tilt_down",
+   "fog": 0.85,
+   "title": {
+    "text": "Son açıklama",
+    "anim": "slam",
+    "color": "yellow",
+    "pos": "lower",
+    "delay": 0.55
+   },
+   "keywords": [
+    "vuruldu"
+   ],
+   "source": "Rudaw (arşiv fotoğrafı), 28.11.2015 basın açıklaması",
+   "frame": "cutout",
+   "registered": true,
+   "bg": "assets/img/v3_s01_bg.jpg",
+   "outline": "assets/img/v3_s01_ol.png",
+   "anchor": [
+    0.5,
+    1.0
+   ],
+   "outline_at": 0.85,
+   "pop": {
+    "at": 1.35,
+    "scale": 1.06
+   }
+  },
+  {
+   "id": "s02",
+   "narration": "28 Kasım 2015.",
+   "image": "assets/img/v2_s02.jpg",
+   "frame": "polaroid",
+   "board": true,
+   "bg": "$SKILL/assets/doku/board_bg.jpg",
+   "label": "Sur · Dört Ayaklı Minare",
+   "tilt": -5,
+   "transition": "whip_up",
+   "title": {
+    "text": "28.11.2015",
+    "anim": "words",
+    "color": "red",
+    "pos": 0.172,
+    "words_dur": 0.4
+   },
+   "source": "Kullanıcının verdiği fotoğraf (kaynağı bilinmiyor)"
+  },
+  {
+   "id": "s03",
+   "narration": "Diyarbakır Baro Başkanı Tahir Elçi,",
+   "image": "assets/img/v3_s03.jpg",
+   "frame": "polaroid",
+   "board": true,
+   "bg": "$SKILL/assets/doku/board_bg.jpg",
+   "label": "Tahir Elçi",
+   "tilt": 4,
+   "transition": "whip_left",
+   "title": {
+    "text": "Baro Başkanı",
+    "anim": "words",
+    "color": "white",
+    "pos": 0.172,
+    "words_dur": 0.5
+   },
+   "source": "Kullanıcının verdiği fotoğraf (28.11.2015 basın açıklaması; kaynağı bilinmiyor)"
+  },
+  {
+   "id": "s04",
+   "narration": "Dört Ayaklı Minare'nin önünde çatışmaların durmasını istiyordu.",
+   "image": "assets/img/v3_s04_fg.png",
+   "transition": "zoom_through",
+   "fog": 0.9,
+   "title": {
+    "text": "Dört Ayaklı Minare",
+    "anim": "slam",
+    "color": "yellow",
+    "pos": 0.17,
+    "delay": 0.3,
+    "behind": true
+   },
+   "keywords": [
+    "durmasını"
+   ],
+   "source": "Kullanıcının verdiği minare fotoğrafı (kaynağı bilinmiyor)",
+   "frame": "cutout",
+   "registered": true,
+   "bg": "assets/img/v3_s04_bg.jpg",
+   "outline": "assets/img/v3_s04_ol.png",
+   "anchor": [
+    0.387,
+    0.895
+   ],
+   "outline_at": 0.15,
+   "outline_angle": 0,
+   "pop": {
+    "at": 0.55,
+    "scale": 1.04
+   },
+   "sway": 1.7,
+   "dolly": 0
+  },
+  {
+   "id": "s05",
+   "narration": "Sokakta silahlar patladı.",
+   "image": "assets/img/v2_s05.jpg",
+   "move": "push_in",
+   "transition": "bw_flash",
+   "sfx": [
+    "hit"
+   ],
+   "title": {
+    "text": "Saat 10.53",
+    "anim": "slam",
+    "color": "red",
+    "pos": "top"
+   },
+   "source": "Karar'da yayımlanan olay anı kareleri (yüzler yayıncı tarafından buzlanmış)"
+  },
+  {
+   "id": "s06",
+   "narration": "Elçi tek kurşunla öldü.",
+   "image": "assets/img/v4_s06_fg.png",
+   "frame": "cutout",
+   "bg": "assets/img/v3_s06_bg.jpg",
+   "transition": "orbit",
+   "fog": 0.9,
+   "keywords": [
+    "tek"
+   ],
+   "source": "Yapay zekâ portre (referans: VOA fotoğrafı) + yapay zekâ kovan",
+   "caption": false,
+   "title": {
+    "text": "Tek kurşun",
+    "anim": "slam",
+    "color": "red",
+    "pos": 0.16
+   },
+   "tag": "Temsilî görsel"
+  },
+  {
+   "id": "s07",
+   "narration": "Olay yeri ancak aylar sonra incelendi.",
+   "image": "assets/img/v2_s07.jpg",
+   "frame": "polaroid",
+   "board": true,
+   "bg": "$SKILL/assets/doku/board_bg.jpg",
+   "label": "Olay yeri",
+   "tilt": 5,
+   "transition": "whip_up",
+   "title": {
+    "text": "110 gün sonra",
+    "anim": "words",
+    "color": "red",
+    "pos": 0.172,
+    "words_dur": 0.5
+   },
+   "keywords": [
+    "aylar"
+   ],
+   "source": "Habertürk haber karesi"
+  },
+  {
+   "id": "s08",
+   "narration": "Öldürücü mermi hiç bulunamadı.",
+   "frame": "cutout",
+   "image": "assets/img/s08_fg.png",
+   "bg": "$SKILL/assets/doku/paper_dark.jpg",
+   "transition": "spin",
+   "fog": 0.5,
+   "tag": "Temsilî görsel",
+   "title": {
+    "text": "Mermi yok",
+    "anim": "stamp",
+    "color": "yellow",
+    "pos": "upper",
+    "behind": true
+   },
+   "keywords": [
+    "hiç"
+   ]
+  },
+  {
+   "id": "s09",
+   "narration": "Bağımsız inceleme üç polisi işaret etti.",
+   "frame": "cutout",
+   "image": "assets/img/s09_fg.png",
+   "bg": "assets/real/r_fa.jpg",
+   "transition": "whip_left",
+   "tag": "Arka plan: Forensic Architecture",
+   "title": {
+    "text": "3 polis",
+    "anim": "slam",
+    "color": "yellow",
+    "pos": "center",
+    "behind": true
+   },
+   "source": "Forensic Architecture canlandırma karesi (Goldsmiths haber görseli)"
+  },
+  {
+   "id": "s10",
+   "narration": "İddianame dört buçuk yıl sonra yazıldı.",
+   "image": "assets/img/s10.png",
+   "frame": "polaroid",
+   "board": true,
+   "bg": "$SKILL/assets/doku/board_bg.jpg",
+   "label": "İddianame 2020",
+   "tilt": -4,
+   "transition": "whip_up",
+   "tag": "Temsilî görsel",
+   "title": {
+    "text": "4,5 yıl",
+    "anim": "words",
+    "color": "red",
+    "pos": 0.172,
+    "words_dur": 0.4
+   }
+  },
+  {
+   "id": "s11",
+   "narration": "2024'te üç polis de beraat etti.",
+   "image": "assets/img/s11.png",
+   "move": "pan_right",
+   "transition": "zoom_through",
+   "fog": 0.6,
+   "tag": "Temsilî görsel",
+   "title": {
+    "text": "Beraat",
+    "anim": "slam",
+    "color": "red",
+    "pos": "top",
+    "sub": "12 Haziran 2024",
+    "sub_font": "serif",
+    "sub_size": 58
+   }
+  },
+  {
+   "id": "s12",
+   "narration": "Dosyada hâlâ bir fail yok.",
+   "image": "$SKILL/assets/doku/dark_grunge.jpg",
+   "frame": "scatter",
+   "transition": "fade",
+   "keywords": [
+    "fail"
+   ],
+   "slots": [
+    [
+     0.34,
+     0.38
+    ],
+    [
+     0.63,
+     0.43
+    ],
+    [
+     0.38,
+     0.5
+    ],
+    [
+     0.62,
+     0.56
+    ],
+    [
+     0.5,
+     0.64
+    ]
+   ],
+   "word_size": 112
+  }
+ ],
+ "outro": {
+  "duration": 3.3,
+  "video": "$SKILL/assets/marka/outro_amed.mp4",
+  "text": []
+ },
+ "fonts": {
+  "title": "AmedBaslikAnton-Regular"
+ }
+}

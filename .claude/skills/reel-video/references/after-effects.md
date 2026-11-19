@@ -1,82 +1,56 @@
-# After Effects: proje üretimi, after-effects-mcp, render
+# After Effects: kurulum, render, sorun giderme
 
-## Neden ExtendScript + MCP birlikte
-[after-effects-mcp](https://github.com/Dakkshin/after-effects-mcp) kompozisyon, metin / şekil / düz renk katmanı,
-keyframe, expression, maske, kamera, null oluşturabilir ve katman bilgisi okuyabilir; ama **görsel / ses içe
-aktaramaz ve render alamaz** (izinli script listesinde yok). Bu yüzden:
+Projenin tamamı `build_ae_jsx.py` ile tek bir `build.jsx` (ExtendScript) olarak üretilir: içe aktarma, sahne
+kompozisyonları, 3B kamera, başlıklar, altyazılar, doku katmanları, sesler, render kuyruğu, `.aep` kaydı.
+`preview_ffmpeg.py` bu görünümü **göstermez** (eski, düz önizleme; ayrıca kurulu ffmpeg'de altyazı desteği yok):
+kontrol her zaman AE çıktısından, kare föyleriyle yapılır.
 
-1. Projenin tamamı `build_ae_jsx.py` ile tek bir `build.jsx` olarak üretilir (içe aktarma, sahneler, geçişler,
-   yazılar, sesler, render kuyruğu, .aep kaydı).
-2. `build.jsx` AE'nin komut satırı ile çalıştırılır.
-3. after-effects-mcp **kontrol ve ince ayar** içindir: katmanları listele, zamanlama / konum / ölçek düzelt,
-   keyframe ve expression ekle.
-4. Render `aerender` ile alınır.
-
-## build.jsx üret ve çalıştır
-AE yolları: repo kökündeki `ae-yollari.json` (kurulum scriptinin yazdığı `afterfx` / `aerender`) varsa onu kullan.
-
+## Tek komut
 ```bash
+bash $S/ae_build.sh projeler/<ad> --render
+```
+Sırasıyla: AE'deki projeyi kapatır (yalnızca boşsa ya da bu projenin `reel.aep`'iyse; başka proje açıksa **durur**),
+`timeline.py` → `build_ae_jsx.py` → `osascript … DoScriptFile` ile betiği AE'de çalıştırır → `reel.log.txt` bekler →
+`aerender` → sesi −14 LUFS / −1 dBTP'ye dengeler (`reel_ae.mp4` ham, `reel.mp4` teslim). 30 sn'lik video ≈ 2–3 dk.
+
+Elle:
+```bash
+python3 $S/timeline.py shotlist.json -o timeline.json --words assets/words.json
 python3 $S/build_ae_jsx.py timeline.json -o build/build.jsx --aep build/reel.aep --mp4 build/reel.mp4
+osascript -e 'tell application "Adobe After Effects 2027" to DoScriptFile "/tam/yol/build/build.jsx"'
+"/Applications/Adobe After Effects 2027/aerender" -project "$PWD/build/reel.aep" -comp REEL -output "$PWD/build/reel_ae.mp4"
 ```
-Windows (PowerShell / Git Bash; sürüm klasörünü kendi kurulumuna göre değiştir):
-```bash
-"/c/Program Files/Adobe/Adobe After Effects 2025/Support Files/AfterFX.exe" -r "C:\\tam\\yol\\build\\build.jsx"
-```
-macOS:
-```bash
-osascript -e 'tell application "Adobe After Effects 2025" to DoScriptFile "/tam/yol/build/build.jsx"'
-```
-- AE açık değilse açılır, betik çalışır, proje kaydedilir. İlk çalıştırmada AE "betik dosya yazabilsin mi"
-  diye sorabilir: Settings → Scripting & Expressions → **Allow Scripts to Write Files and Access Network** açık olmalı.
-- Betik bitince `build/reel.log.txt` yazar. Oku:
-  - `EKSİK DOSYA` → yol yanlış / dosya yok.
-  - `FONT YOK, yerine … kullanıldı` → fontu kur (aşağıda) ve betiği yeniden çalıştır.
-  - `HATA (satır N)` → `build.jsx`'in o satırına bak; çoğu zaman eski AE sürümünde olmayan bir özellik.
-  - `TAMAM: … katman` → başarılı.
-- Betiği tekrar çalıştırmak **yeni bir REEL kompozisyonu** ekler; temiz başlamak için AE'de yeni proje aç
-  (File → New) ya da `.aep`'yi sil.
+Windows: `"…\Support Files\AfterFX.exe" -r build\build.jsx` ve `aerender.exe`.
 
-## Render
-```bash
-"/c/Program Files/Adobe/Adobe After Effects 2025/Support Files/aerender.exe" -project "C:\\…\\build\\reel.aep" -comp REEL -output "C:\\…\\build\\reel.mp4"
-```
-- AE 2023 ve sonrası H.264'ü doğrudan render kuyruğundan verir; betik "H.264 - Match Render Settings - 15 Mbps"
-  şablonunu dener. Şablon bulunamazsa log'da yazar; o zaman AE çıktısı .mov / .avi olabilir →
-  `ffmpeg -i reel.mov -c:v libx264 -crf 18 -pix_fmt yuv420p -c:a aac -movflags +faststart reel.mp4`.
-- Alternatif: `--render-now` ile betik sonunda AE içinde render (AE arayüzü render bitene kadar kilitli kalır).
+## Log
+`build/reel.log.txt`: `TAMAM: N katman …` başarı. `EKSİK DOSYA` (yol yanlış), `FONT YOK` (fontu kur, AE'yi yeniden
+başlat), `HATA (satır N)` (`build.jsx`'in o satırına bak). Betik yarıda kalırsa AE'de yarım bir REEL kalır;
+`ae_build.sh` her seferinde projeyi kaydetmeden kapatıp temiz başlar.
 
-## after-effects-mcp ile ince ayar
-Kurulum ve panel: `kurulum.md`. AE'de **Window → mcp-bridge-auto.jsx** paneli açık ve "Auto-run commands"
-işaretli olmalı. Komutlar sıraya girer; sonucu `get-results` ile al.
+## Katman adları (elle rötuş için)
+Ana kompozisyon `REEL`: `KAMERA`, `SCENE sXX` (3B sahne katmanları), `BACKDROP`, `TR …` (geçiş ayar katmanları),
+`GRADE`, `VIGNETTE`, `OVL halftone / dust / scratches / grain`, `CAP n` + `CAP pill n`, `OUTRO`, `VO`, `MUSIC`, `SFX …`.
+Sahne kompozisyonu `SC sXX`: `sXX` (ana görsel / konu), `sXX_bg`, `sXX_kontur`, `sXX_grp` (polaroid / daire null'ı),
+`sXX_thread`, `sXX_pin`, `TITLE sXX` / `BTITLE sXX` (konunun arkasındaki başlık), `SUB sXX`, `FOG n`, `TAG sXX`, `W sXX n`.
+Elle yapılan değişiklikler `.aep`'de kalır ama yeniden üretimde kaybolur: kalıcı değişiklik = shotlist'i düzelt.
 
-| İş | Araç |
-|---|---|
-| Proje / kompozisyon listesi | `run-script` → `getProjectInfo`, `listCompositions` |
-| Katman bilgisi | `getLayerInfo` (compName: "REEL") |
-| Konum / ölçek / opaklık / zaman | `setLayerProperties` (layerName ör. "TITLE s06", "CAP 12") |
-| Keyframe ekle | `setLayerKeyframe` (property: Position / Scale / Opacity / Rotation) |
-| Expression | `setLayerExpression` (ör. hafif sallanma: `wiggle(2,6)`) |
-| Bulanıklık efekti | `apply-effect` / `apply-effect-template` (`gaussian-blur`, `directional-blur`) |
-| Ek metin / şekil | `createTextLayer` / `createShapeLayer` (run-script üzerinden) |
-
-Katman adları: sahne görseli = `s01`; daire / polaroid grubu = `s01_grp`; başlık = `TITLE s01`; altyazı =
-`CAP 0…`; hap = `CAP pill N`; geçiş ayar katmanı = `TR whip s02` vb.; `GRADE`, `VIGNETTE`, `VO`, `MUSIC`, `SFX …`.
-
-**Önemli:** MCP ile yapılan değişiklikler `.aep`'de kalır ama `build.jsx` yeniden üretilirse kaybolur. Kalıcı
-değişiklik = shotlist / timeline'ı düzelt + yeniden üret. MCP'yi son rötuşlar için kullan ve sonra
-`File → Save` (ya da kullanıcıya kaydetmesini söyle) ve yeniden render al.
+## ExtendScript tuzakları (betiği değiştirirken)
+- **Geçersiz referans:** bir katmana efekt, bir şekle dolgu / çizgi, bir metne animatör eklemek, daha önce alınmış
+  kardeş özellik referanslarını geçersiz kılar ("Object is invalid"). Eklemeden sonra özelliği katmandan yeniden al.
+- **3B sıralama:** iki 3B katmanın arasına 2B katman girerse derinlik sıralaması bölünür. Geçiş ayar katmanları ve
+  ses katmanları bu yüzden döngüden sonra en üste / en alta taşınır; track matte'li geçiş (iris) 3B düzende kullanılmaz.
+- **Kamera süzülmesi:** kamera anahtarları tüm süre boyunca yumuşatılır; bir sahnenin sonunda anahtar yoksa kamera
+  sonraki geçişe doğru erkenden kayar. Her sahne sonuna (`b − 0.22`) anahtar konur.
+- **Kadraj payı:** kamera sahneye %4,5 yakın durur (kenarlar görünmesin) ve sahne boyunca %3,5 daha yaklaşır; üst
+  kenara yakın başlıklar kırpılır (`pos ≥ 0.13`, gerekirse `dolly: 0`).
+- **Glow:** `ADBE Glo2` eşiği beklenen birimde değil; renkleri patlatıyor. Kapalı.
+- Hareket bulanıklığı için hem kompozisyonda hem **her katmanda** `motionBlur = true` gerekir.
+- `build.jsx` UTF-8 BOM ile yazılır; BOM silinirse Türkçe karakterler bozulur.
 
 ## Fontlar
-Google Fonts'tan indir ve sisteme kur (AE yeniden başlatılmalı):
-- earn: **Anton**, **Poppins** (SemiBold), **Playfair Display** (Italic)
-- hex: **Playfair Display** (Italic, Bold Italic)
-Hepsi Türkçe karakterleri (ğ ş ı İ ç ö ü) destekler. Farklı font istersen shotlist'te `"fonts": {"title": "PostScriptAdı"}`.
+`assets/fonts/` içindekileri `~/Library/Fonts`'a kopyala: `AmedBaslikAnton-Regular`, `Anton-Regular`,
+`Poppins-SemiBold`; ayrıca Playfair Display Italic kurulu olmalı. Başka font: shotlist'te `"fonts": {"title": "<PostScript adı>"}`.
 
-## Sorun giderme
-| Belirti | Çözüm |
-|---|---|
-| Betik hiçbir şey yapmadı, log yok | Scripting izinleri kapalı; ya da yol boşluk içeriyor ve tırnaklanmadı |
-| Türkçe karakterler bozuk | build.jsx UTF-8 BOM ile yazılır; dosyayı başka bir editörle kaydedip BOM'u silmeyin |
-| Track matte çalışmıyor | AE 2023 öncesi: matte katmanı hedefin hemen üstünde olmalı (betik böyle kurar); katman sırasını elle değiştirmeyin |
-| Altyazı hapı metinden kaymış | Hap boyutu/konumu expression ile metne bağlı; metin katmanının anchor expression'ını silmeyin |
-| Render çok yavaş | Motion blur'u kapat (comp ayarı), `Directional Blur` uzunluğunu azalt |
+## Mocha / takip
+Yalnızca hareketli video görüntüsü varsa anlamlı (bir yüzeye yazı oturtmak gibi) ve elle yapılır. Durağan
+fotoğraflarla kurulan sahnelerde kullanılmaz; "3B" hissi kamera + katman derinliğinden gelir.

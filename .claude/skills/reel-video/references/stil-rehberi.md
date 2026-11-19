@@ -1,5 +1,12 @@
 # Stil rehberi
 
+> **Önce bunu oku — kanalın bugünkü görünümü (earn):** gerçek fotoğraflar; arka plan siyah-beyaz + halftone, konu
+> maskelenip renkli ve beyaz konturlu öne çıkar; başlık arka plan ile konu arasında; koyu pano üstünde iğneli polaroid
+> ve kırmızı ip; kelime kelime gelen başlıklar; gerçek 3B kamerayla sahneler arası uçuş + hareket bulanıklığı; tüm
+> videonun üstünde halftone, toz, çizik, gren; alt kenarda sis; dağınık italik kelimelerle kapanış cümlesi; sonda kanal
+> animasyonu. Parlama (glow) yok. Ayrıntı: `marka.md`, `sahne-katalogu.md`. Aşağıdaki tablolar referans hesapların
+> genel dilini anlatır.
+
 9 referans videonun `rea-video decompose` + sahne sahne görsel incelemesinden çıkarıldı (ayrıntı: `analiz.md`).
 Ortak paydada **ikisi de aynı motor**: AI ile üretilmiş *durağan* görseller After Effects'te hareketlendirilir
 (push / pan / parallax), üstüne kinetik yazı ve geçişler bindirilir, altta anlatım + müzik + efektler.

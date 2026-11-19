@@ -1,6 +1,8 @@
 # Türkçe senaryo
 
 ## Uzunluk
+- **Ölçülen tempo:** kanalın anlatıcısı (Ogün Can, eleven_v4) ≈ 2,15 kelime/sn. 30 sn'lik video = 27 sn anlatım ≈ 58–62
+  kelime + 3,3 sn kapanış animasyonu. Aşağıdaki genel oranlar daha hızlı anlatıcılar içindir.
 - Türkçe TTS ≈ 2.3–2.5 kelime/sn. earn 45 sn → 95–110 kelime; hex 60 sn → 130–145 kelime.
 - Cümleler kısa: ortalama 8–12 kelime. Her cümle bir sahneye ya da iki yarım sahneye bölünebilmeli.
 
