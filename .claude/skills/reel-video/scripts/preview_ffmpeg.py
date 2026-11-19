@@ -58,7 +58,33 @@ def cover(img, w, h):
     return ImageOps.fit(img.convert("RGB"), (w, h), Image.LANCZOS)
 
 
-def scene_frame(sc, W, H, font_path):
+def baked_title(sc, st, W, H, title_font_path, style):
+    """cutout sahnelerinde figürün ARKASINDA kalan başlığı durağan olarak çizer (RGBA katman)."""
+    t = sc.get("title") or {}
+    layer = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    if not (t and title_font_path):
+        return layer
+    txt = t.get("text", "")
+    if style == "earn" and not t.get("keep_case"):
+        txt = tr_upper(txt)
+    longest = max((len(x) for x in txt.split("\n")), default=1)
+    size = int(min(t.get("size", st["title"]["size"]), 0.88 * 1080 / max(longest * 0.47, 1)) * W / 1080)
+    c = st["colors"].get(t.get("color", st["title"]["color"]), t.get("color", "#FFD21F"))
+    posy = {"top": 0.20, "upper": 0.30, "center": 0.45, "lower": 0.60, "bottom": 0.66}
+    y = int(posy.get(t.get("pos", st["title"]["pos"]), 0.2) * H)
+    font = ImageFont.truetype(title_font_path, size)
+    d = ImageDraw.Draw(layer)
+    d.text((W / 2 + 5, y + 7), txt, fill=(0, 0, 0, 150), anchor="mm", font=font)
+    d.text((W / 2, y), txt, fill=c, anchor="mm", font=font)
+    anim = t.get("anim", st["title"]["anim"])
+    if anim == "stamp":
+        bb = d.textbbox((W / 2, y), txt, anchor="mm", font=font)
+        d.rectangle((bb[0] - 30, bb[1] - 18, bb[2] + 30, bb[3] + 18), outline=c, width=max(int(7 * W / 1080), 2))
+        layer = layer.rotate(t.get("rotate", 6) if t.get("rotate") else 6, resample=Image.BICUBIC, center=(W / 2, y))
+    return layer
+
+
+def scene_frame(sc, W, H, font_path, st=None, title_font_path=None, style="earn"):
     img = Image.open(sc["image"]) if sc.get("image") and Path(sc["image"]).exists() else None
     if img is None:
         im = Image.new("RGB", (W, H), (60, 55, 50))
@@ -69,6 +95,20 @@ def scene_frame(sc, W, H, font_path):
     frame = sc.get("frame", "full")
     if frame == "full":
         return cover(img, W, H)
+    if frame == "cutout":
+        # arka plan + (istenirse) başlık + alfa kanallı figür; figür alt kenara oturur
+        if sc.get("bg") and Path(sc["bg"]).exists():
+            base = cover(Image.open(sc["bg"]), W, H).point(lambda v: int(v * 0.72))
+        else:
+            base = Image.new("RGB", (W, H), (24, 22, 22))
+        base = base.convert("RGBA")
+        if (sc.get("title") or {}).get("behind") and st:
+            base.alpha_composite(baked_title(sc, st, W, H, title_font_path, style))
+        fg = img.convert("RGBA")
+        k = max(W / fg.width, H / fg.height)
+        fg = fg.resize((int(fg.width * k + 0.5), int(fg.height * k + 0.5)), Image.LANCZOS)
+        base.alpha_composite(fg.crop(((fg.width - W) // 2, fg.height - H, (fg.width - W) // 2 + W, fg.height)))
+        return base.convert("RGB")
     bg_src = Image.open(sc["bg"]) if sc.get("bg") and Path(sc["bg"]).exists() else img
     bg = cover(bg_src, W, H)
     if not sc.get("bg"):
@@ -177,6 +217,8 @@ def build_ass(tl, st, W, H, cap_font, title_font):
         t = sc.get("title")
         if not t:
             continue
+        if t.get("behind") and sc.get("frame") == "cutout":
+            continue  # figürün arkasında: sahne karesine gömülü çizildi
         txt = t.get("text", "")
         if style == "earn" and not t.get("keep_case"):
             txt = tr_upper(txt)
@@ -253,7 +295,8 @@ def main():
             run(["ffmpeg", "-y", "-loglevel", "error", "-i", sc["video"], "-t", f"{dur:.3f}", "-vf", vf, "-an",
                  "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", str(out)])
         else:
-            frame = scene_frame(sc, W, H, body_font)
+            title_path = find_font(["Anton-Regular", "Anton"], a.fonts_dir)
+            frame = scene_frame(sc, W, H, body_font, st, title_path, tl["style"])
             fp = tmp / f"f{i:03d}.png"
             frame.save(fp)
             z, x, y = zoompan_expr(sc.get("move", st["default_move"]), n)
@@ -293,7 +336,10 @@ def main():
     ass = tmp / "subs.ass"
     ass.write_text(build_ass(tl, st, W, H, cap_family, title_family), encoding="utf-8")
     fdir = f":fontsdir={a.fonts_dir}" if a.fonts_dir else ""
-    chain = ",".join(grade + [f"ass={ass}{fdir}"])
+    has_ass = " ass " in subprocess.run(["ffmpeg", "-hide_banner", "-filters"], capture_output=True, text=True).stdout
+    if not has_ass:
+        print("⚠ bu ffmpeg libass içermiyor: önizlemede altyazı ve başlık yok (AE çıktısında olacak)")
+    chain = ",".join(grade + ([f"ass={ass}{fdir}"] if has_ass else [])) or "null"
     fc.append(f"{last}{chain},trim=duration={tl['duration']:.3f}[vout]")
 
     # 3) ses
@@ -316,7 +362,7 @@ def main():
         t = sc.get("title")
         if t and t.get("anim", st["title"]["anim"]) in ("slam", "stamp"):
             events.append((sfxmap["slam"], sc["start"] + t.get("delay", 0.08), -6))
-        if sc.get("frame") in ("circle", "polaroid"):
+        if sc.get("frame") in ("circle", "polaroid", "cutout"):
             events.append((sfxmap["pop"], sc["start"], -8))
         for s in sc.get("sfx", []):
             nm, off = (s, 0) if isinstance(s, str) else (s["name"], s.get("at", 0))
