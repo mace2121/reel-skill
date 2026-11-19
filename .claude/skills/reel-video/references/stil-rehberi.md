@@ -86,3 +86,19 @@ sahne içinde dönen / dolan nesneler (dümen, tabanca topu), aynı tablonun yak
 
 Font notu: Playfair italikte rakamlar eski stil; "800" **"Soo"** gibi okunuyor. hex'te sayıları yazıyla yaz
 ("Sekiz yüz yıl önce", "yirmi beş").
+
+## Alt türler (yedi videonun incelemesinden)
+Aynı hesap konuya göre farklı kurgu kullanıyor. Konuyu alınca önce alt türü seç, planda söyle.
+
+| Alt tür | Ne zaman | Altyazı | Görsel | Ayırt edici öğeler |
+|---|---|---|---|---|
+| **earn / olay** (D.B. Cooper, Project A119) | Suç, gizem, soğuk savaş, tek olay | Yok: yalnız 2 satır başlık (`caption.mode: none`, `title.over`) | Tam kare sinematik AI illüstrasyon / gerçek fotoğraf | Gökyüzü ya da uzay kartında tarih; isim etiketi; masaya düşen gazete + fosforlu kalem; `iris`; kapanışta 2 yazı kartı |
+| **earn / dava** (Kadavra Sinodu; Tahir Elçi bu türde) | Yargılama, soruşturma, kronoloji | Kancada yok, sonra küçük hap | Geniş tablo + portre kartları + belge | Portre kartı + isim altı çizgisi; daktilo fontuyla alıntı; seçici renk; doruk anında renkli `iris`; dağınık kelimeler |
+| **earn / ekonomi** (Buffett) | Para, şirket, sayı ağırlıklı | Baştan sona küçük kutu altyazı | Kağıt kolaj, üstten masa düzeni, düz renkli kartlar | Büyük sayılar, sayım kartları, etiket kutuları, el yazısı vurgu; sahne başı ≈ 2 sn |
+| **earn / sanat** (Çığlık) | Sanat eseri, nesne, mekân | Yok: yazı sahnede (karışık font kilidi) | Sabit bir "set" (müze duvarı) + içine giren nesneler | Açıklama etiketleri, spot kartında tek kelimeler, tablonun içine dalış |
+| **hex / arşiv** (alışveriş arabası) | 1900–1970, fotoğrafı olan konular | Tek kelime / kısa öbek, nesneye yakın | Siyah-beyaz gerçek fotoğraf, kesilmiş + beyaz konturlu kişi | Siyah zeminde fotoğraf kartı; beyaz çerçeveli portre + sarı isim; belge yığını; sonda bugünün görüntüsü |
+| **hex / gravür** (bilek saati; El Cezerî bu türe yakın) | 1900 öncesi, fotoğrafı olmayan konular | Tek kelime / kısa öbek, sabit noktada | Renkli gravür / yağlı boya figürler krem zeminde, kesilmiş | Elle çizilmiş elips + dev italik yıl; boş kağıt kartlar; `wipe_up`; açılış sahnesinin sonda geri dönmesi |
+
+Hepsinde ortak: (1) işaretleme öğeleri (`marks`, `labels`), (2) 2–4 yazı kartı sahnesi, (3) en az 3 farklı geçiş türü,
+(4) aynı görselin birden çok kadrajla kullanılması, (5) belge ya da gazete sahnesi, (6) dev yıl / sayı yazısı.
+Amed Güncel varsayılanı değişmedi (bkz. `marka.md`): earn'de halftone + kanal fontu + kanal kapanışı.

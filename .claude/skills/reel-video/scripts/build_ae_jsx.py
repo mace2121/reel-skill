@@ -54,7 +54,23 @@ def prepare(tl, aep, mp4, render_now, om_template):
             t["font"] = st["fonts"]["title"] if t.get("anim") != "type" else st["fonts"]["caption"]
             if t.get("font_key"):
                 t["font"] = st["fonts"].get(t["font_key"], t["font"])
+            if t.get("over"):
+                t["over"] = t["over"] if t.get("keep_case") else (tr_upper(t["over"]) if tl["style"] == "earn" else t["over"])
             s["title"] = t
+        if s.get("marks"):   # fosforlu kalem / alt çizgi / elle çizilmiş elips
+            s["marks"] = [dict(m, rgb=color(st, m.get("color", "yellow"))) for m in s["marks"]]
+        if s.get("labels"):  # sahne içi küçük etiketler (isim, yıl, açıklama)
+            lbs = []
+            for lb in s["labels"]:
+                lb = dict(lb)
+                lb["rgb"] = color(st, lb.get("color", "white"))
+                if lb.get("bg"):
+                    lb["bg_rgb"] = color(st, lb["bg"])
+                lb["font"] = st["fonts"].get(lb.get("font_key", "caption"), st["fonts"]["caption"])
+                lbs.append(lb)
+            s["labels"] = lbs
+        if s.get("transition_color"):
+            s["tr_rgb"] = color(st, s["transition_color"])
         if s.get("label"):  # polaroid altı / görsel altı küçük etiket
             s["label"] = tr_upper(s["label"]) if tl["style"] == "earn" else s["label"]
         if s.get("frame") == "scatter":   # kelimeler ekrana dağılır: kelime zamanlarını sahneye taşı
@@ -562,12 +578,76 @@ for (var i = 0; i < D.scenes.length; i++) {
       wordsOn(SB, ta + 0.3, Math.min(0.8, (tb - ta) * 0.4));
       var sbf = P(SB, "ADBE Opacity"); key(sbf, tb - 0.1, 100); key(sbf, tb, 0);
     }
+    var OV = null;
+    if (t.over) {   // büyük başlığın üstünde küçük beyaz satır (earn: "HE DEMANDED" / "$200,000")
+      var ovs = t.over_size || Math.round(t.size * 0.42);
+      OV = addText(t.over, { size: ovs, rgb: [1, 1, 1], font: t.font, x: W / 2, y: t.y - t.size * 0.52 - ovs * 0.62 });
+      OV.name = "OVER " + sc.id; span(OV, Math.max(a, ta - 0.25), tb);
+      var ovh = fx(OV, "ADBE Drop Shadow"); var ovo = fp(ovh, "ADBE Drop Shadow-0002", 2); if (ovo) ovo.setValue(170);
+      if (t.rotate) P(OV, "ADBE Rotate Z").setValue(t.rotate);
+      popIn(OV, Math.max(a, ta - 0.25), 0);
+      var ovf = P(OV, "ADBE Opacity"); key(ovf, Math.max(ta + 0.3, tb - 0.1), 100); key(ovf, tb, 0);
+    }
     // figürün arkasındaki başlık: metni (ve damga kutusunu) figür katmanının altına taşı
     if (t.behind && frame === "cutout" && L) {
-      try { TL.moveAfter(L); if (stampBox) stampBox.moveAfter(L); if (SB) SB.moveAfter(L); } catch (e) { log("başlık arkaya alınamadı " + sc.id + ": " + e); }
+      try { TL.moveAfter(L); if (stampBox) stampBox.moveAfter(L); if (SB) SB.moveAfter(L); if (OV) OV.moveAfter(L); } catch (e) { log("başlık arkaya alınamadı " + sc.id + ": " + e); }
     }
     // çıkış
     var outO = P(TL, "ADBE Opacity"); key(outO, Math.max(ta + 0.3, tb - 0.1), 100); key(outO, tb, 0);
+  }
+
+  // ---- işaretler: fosforlu kalem süpürmesi, alt çizgi, elle çizilmiş elips (konumlar 0-1 kesir; x,y = merkez)
+  if (sc.marks) {
+    for (var mi = 0; mi < sc.marks.length; mi++) {
+      var mk0 = sc.marks[mi], ma = a + (mk0.at === undefined ? 0.3 : mk0.at), mb2 = mk0.until ? a + mk0.until : b + TAIL, md = mk0.dur || 0.35;
+      var mw = (mk0.w || 0.5) * W, mh = (mk0.h || 0.03) * H, mx = (mk0.x === undefined ? 0.5 : mk0.x) * W, my = (mk0.y === undefined ? 0.5 : mk0.y) * H;
+      try {
+        if (mk0.type === "ellipse") {
+          var me = shapeEllipse("MARK " + sc.id + " " + mi, 100, null, mk0.rgb, mk0.stroke || 7);
+          me.ellipse.property("ADBE Vector Ellipse Size").setValue([mw, mh]);
+          span(me.layer, ma, mb2); P(me.layer, "ADBE Position").setValue([mx, my]);
+          P(me.layer, "ADBE Rotate Z").setValue(mk0.rotate === undefined ? -8 : mk0.rotate);
+          me.layer.property("ADBE Root Vectors Group").property(1).property("ADBE Vectors Group").addProperty("ADBE Vector Filter - Trim");
+          var mte = me.layer.property("ADBE Root Vectors Group").property(1).property("ADBE Vectors Group").property("ADBE Vector Filter - Trim").property("ADBE Vector Trim End");
+          key(mte, ma, 0); key(mte, ma + md, 100);
+        } else {
+          var isU = mk0.type === "underline"; if (isU && !mk0.h) mh = H * 0.006;
+          var mr = shapeRect("MARK " + sc.id + " " + mi, mw, mh, mk0.rgb, 0);
+          mr.rect.property("ADBE Vector Rect Position").setValue([mw / 2, 0]);   // soldan sağa büyüsün
+          span(mr.layer, ma, mb2); P(mr.layer, "ADBE Position").setValue([mx - mw / 2, my]);
+          if (mk0.rotate) P(mr.layer, "ADBE Rotate Z").setValue(mk0.rotate);
+          var msc = P(mr.layer, "ADBE Scale"); key(msc, ma, [0, 100]); key(msc, ma + md, [100, 100]);
+          if (!isU) {
+            mr.layer.blendingMode = mk0.blend === "normal" ? BlendingMode.NORMAL : (mk0.blend === "screen" ? BlendingMode.SCREEN : BlendingMode.MULTIPLY);
+            P(mr.layer, "ADBE Opacity").setValue(mk0.opacity || 85);
+          }
+        }
+      } catch (e) { log("işaret kurulamadı " + sc.id + ": " + e); }
+    }
+  }
+  // ---- etiketler: sahne içinde küçük yazılar; bg verilirse renkli kutu içinde (isim / yıl etiketi)
+  if (sc.labels) {
+    for (var li = 0; li < sc.labels.length; li++) {
+      var lb = sc.labels[li], la = a + (lb.at === undefined ? 0.3 : lb.at), lbe = lb.until ? a + lb.until : b + TAIL;
+      try {
+        var LB = addText(lb.text, { size: lb.size || 44, rgb: lb.rgb, font: lb.font, x: (lb.x === undefined ? 0.5 : lb.x) * W, y: (lb.y === undefined ? 0.5 : lb.y) * H });
+        LB.name = "LABEL " + sc.id + " " + li; span(LB, la, lbe);
+        if (lb.rotate) P(LB, "ADBE Rotate Z").setValue(lb.rotate);
+        if (lb.anim === "type") typeOn(LB, la, lb.dur || 0.5);
+        else if (lb.anim === "pop") popIn(LB, la, 0);
+        else { var lbo = P(LB, "ADBE Opacity"); key(lbo, la, 0); key(lbo, la + 0.2, 100); }
+        if (lb.bg_rgb) {
+          var lbx = shapeRect("LABELBOX " + sc.id + " " + li, 100, 100, lb.bg_rgb, lb.round === undefined ? 10 : lb.round); span(lbx.layer, la, lbe);
+          lbx.rect.property("ADBE Vector Rect Size").expression = 'var t=thisComp.layer("' + LB.name + '");var r=t.sourceRectAtTime(time,false);[r.width+' + (lb.pad_x || 40) + ',r.height+' + (lb.pad_y || 24) + ']';
+          P(lbx.layer, "ADBE Position").expression = 'thisComp.layer("' + LB.name + '").transform.position';
+          P(lbx.layer, "ADBE Rotate Z").expression = 'thisComp.layer("' + LB.name + '").transform.rotation';
+          popIn(lbx.layer, la, 0);
+          lbx.layer.moveAfter(LB);
+        } else {
+          var lbs = fx(LB, "ADBE Drop Shadow"); var lbso = fp(lbs, "ADBE Drop Shadow-0002", 2); if (lbso) lbso.setValue(170);
+        }
+      } catch (e) { log("etiket kurulamadı " + sc.id + ": " + e); }
+    }
   }
 
   // ---- sahne, ana kompozisyona tek 3B katman olarak girer; geçişler gerçek bir kameranın sahneler arasında uçmasıyla yapılır
@@ -638,6 +718,22 @@ for (var i = 0; i < D.scenes.length; i++) {
       key(so, a - 0.12, 0); key(so, a + 0.12, 100);
       var WS = solid(D.look && D.look.wash_rgb ? D.look.wash_rgb : [1, 0.96, 0.86], "TR wash " + sc.id, a - 0.5, a + 0.6); TRL.push(WS);
       var wso = P(WS, "ADBE Opacity"); key(wso, a - 0.5, 0); key(wso, a, 88); key(wso, a + 0.6, 0); easeAll(wso, 60);
+    } else if (tr === "iris") {
+      // renk kadrajı kaplar, sonra bir noktadan daire açılıp yeni sahneyi gösterir
+      var IR = solid(sc.tr_rgb || [0.05, 0.04, 0.03], "TR iris " + sc.id, a - 0.2, a + 0.62); TRL.push(IR);
+      var iro = P(IR, "ADBE Opacity"); key(iro, a - 0.2, 0); key(iro, a - 0.02, 100);
+      var icx = sc.iris_at ? sc.iris_at[0] * W : W / 2, icy2 = sc.iris_at ? sc.iris_at[1] * H : H / 2, ir0 = 8, ik = ir0 * 0.5523;
+      var imk = IR.property("ADBE Mask Parade").addProperty("ADBE Mask Atom");
+      var ish = new Shape();
+      ish.vertices = [[icx, icy2 - ir0], [icx + ir0, icy2], [icx, icy2 + ir0], [icx - ir0, icy2]];
+      ish.inTangents = [[-ik, 0], [0, -ik], [ik, 0], [0, ik]]; ish.outTangents = [[ik, 0], [0, ik], [-ik, 0], [0, -ik]]; ish.closed = true;
+      imk.property("ADBE Mask Shape").setValue(ish); imk.inverted = true;
+      var ime = imk.property("ADBE Mask Offset"); key(ime, a, -10); key(ime, a + 0.6, H * 1.25); easeAll(ime, 70);
+    } else if (tr === "wipe_up") {
+      // düz renkli perde alttan yükselip kadrajı kaplar, yukarı çıkarken yeni sahne görünür
+      var WU = solid(sc.tr_rgb || [1, 1, 1], "TR wipe " + sc.id, a - 0.3, a + 0.42); TRL.push(WU);
+      P(WU, "ADBE Scale").setValue([110, 104]);
+      var wup = P(WU, "ADBE Position"); key(wup, a - 0.3, [W / 2, H * 1.56]); key(wup, a, [W / 2, H / 2]); key(wup, a + 0.42, [W / 2, -H * 0.56]);
     } else if (tr === "fade" || tr === "light_leak") {
       key(so, a - LEAD, 0); key(so, a, 100);
       if (tr === "light_leak") {

@@ -122,3 +122,35 @@ Geçişte `whoosh`, slam / stamp başlıkta `hit`, polaroid / daire / cutout gir
 - Ses efekti adları: `whoosh_soft`, `hit_soft`, `paper`, `typewriter`.
 - Belge sayfası: sayfayı PIL ile krem kenarlık + gölge + 2° eğimle saydam 1296x2304 tuvale yerleştir, `cutout` ile koyu
   masa zemininin önüne koy; sayfayı tuvalin ortasının biraz altına al (`cy ≈ 0.56`) ki üstte altyazıya yer kalsın.
+
+## İşaretler, etiketler ve yeni geçişler
+Referans videoların hepsinde olan "işaretleme" öğeleri. Konumlar 0–1 arası kesirdir (`x`, `y` = merkez; `w`, `h` = boyut),
+`at` = sahne başından saniye. Görsel hareket ediyorsa işaret kayar: işaretli sahnede `"move": "none"` kullan.
+
+```json
+"marks": [
+  {"type": "highlight", "x": 0.5, "y": 0.42, "w": 0.5, "h": 0.035, "at": 0.5, "color": "#F2D21B"},
+  {"type": "underline", "x": 0.5, "y": 0.80, "w": 0.4, "at": 0.9, "color": "#C0392B"},
+  {"type": "ellipse",   "x": 0.5, "y": 0.50, "w": 0.7, "h": 0.09, "at": 0.5, "color": "yellow"}
+],
+"labels": [
+  {"text": "Dan Cooper", "x": 0.62, "y": 0.44, "at": 0.6, "bg": "yellow", "color": "#111111", "anim": "type"},
+  {"text": "Yağlı boya", "x": 0.2, "y": 0.3, "at": 1.2, "size": 38}
+]
+```
+- `highlight`: fosforlu kalem, soldan sağa süpürür (gazete manşeti, belge satırı). Varsayılan karışım `multiply` (açık zemin
+  için); koyu zeminde `"blend": "screen"` ya da `"normal"` + `opacity`. Ardışık satırlar için birkaç tane, `at` 0,4 sn arayla.
+- `underline`: ismin / yılın altına ince çizgi. `ellipse`: elle çizilmiş gibi çizilen halka (ayrıntıyı işaretle); `rotate`, `stroke`.
+- `labels`: `bg` verilirse renkli kutu içinde (isim, yıl, yer etiketi), verilmezse gölgeli düz yazı (açıklama etiketi).
+  `anim`: `type` (harf harf) | `pop` | yok (belirme). `font_key`: `caption` | `title` | `serif`. `until` ile erken kapat.
+- Başlıkta `"over": "..."`: büyük başlığın üstünde küçük beyaz satır (earn: üstte "ÜÇ POLİS", altta sarı "BERAAT").
+- Geçiş `iris`: renk kadrajı kaplar, sonra bir noktadan daire açılır. `transition_color` (ad ya da `#hex`), `iris_at: [x, y]`
+  (dairenin açıldığı nokta; sahnedeki Ay, yüz, belge mührü gibi bir nesnenin üstü). Doruk anı ve belgeye geçiş için.
+- Geçiş `wipe_up`: düz renkli perde alttan yükselip yukarı çıkar (`transition_color`, varsayılan beyaz). hex'te krem / beyaz.
+- Yalnız başlıklı earn videosu (akan altyazı yok): kökte `"caption": {"mode": "none"}`; her sahneye 2 satır başlık (`over` + `text`).
+- Yazı kartı sahnesi: `scripts/make_card.py` ile zemin üret (düz renk + gren; `--grid`, `--dust`, `--spot x,y`), sahnede
+  `"move": "none"`, `"caption": false` + başlık, ya da `frame: "scatter"`. Her videoda 2–4 kart: yıl, soru, doruk cümlesi, kapanış.
+
+Henüz olmayanlar (referanslarda var; istenirse elle ya da ileride): gökyüzü / bulut köprüsü geçişi, büyüteç geçişi, renk seli
+(sahnenin tek renge boyanması), seçici renk için hazır alan (şimdilik `registered` kesimle yapılıyor), sayarak büyüyen sayı /
+karo sayı, sahneye uçan 3B kıvrık gazete, anahtar kelimenin arkasında fosforlu kutu (altyazı içinde), nesneye yapışık altyazı.
