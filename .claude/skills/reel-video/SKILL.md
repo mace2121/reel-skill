@@ -16,8 +16,11 @@ Görünümün özeti (ayrıntı `references/stil-rehberi.md`):
 - **Genel doku:** halftone tüm videonun üstünde; toz, çizik, gren; sahne bazında sis.
 - **Yazı:** Amed başlık fontu, kelime kelime gelen başlıklar, hap altyazı; kapanışta kanal animasyonu.
 
-İki stil ailesi var: **earn** (varsayılan; yukarıdaki görünüm) ve **hex** (1900 öncesi tarih için sepya gravür,
-ortada tek kelime italik altyazı). Kullanıcı söylemezse earn. Video dili her zaman Türkçe.
+İki stil ailesi var: **earn** (varsayılan; yukarıdaki görünüm; örnek `examples/tahir-elci`) ve **hex** (1900 öncesi
+tarih, icat, biyografi: sıcak yağlı boya tablolar + dönemin gerçek belgeleri, kayan ışık huzmeleri, sahneye gömülü
+italik yazı, yavaş tempo; örnek `examples/el-cezeri`, ayrıntı `stil-rehberi.md` sonu). Kullanıcı söylemezse konuya
+göre seç ve söyle. Kullanıcı yeni referans kareleri verirse önce `frame_sheets.py` ile **tamamını** incele ve
+`analiz.md`'ye işle. Video dili her zaman Türkçe.
 
 ## Çıktı klasörü
 
@@ -92,9 +95,9 @@ bash $S/ae_build.sh projeler/<ad> --render      # timeline -> build.jsx -> AE ->
 ```bash
 python3 $S/frame_sheets.py build/reel.mp4 -o build/qc/son --every 6
 ```
-Föylerin **hepsine** bak. Sık çıkan kusurlar: başlık kadrajın üstünden taşıyor (kamera yaklaşması), konu başlığın
+Föylerin **hepsine** bak (sahne geçiş anlarına ve kapanış klibinin ilk karelerine yakından). Sık çıkan kusurlar: başlık kadrajın üstünden taşıyor (kamera yaklaşması), konu başlığın
 Türkçe harf işaretlerini kapatıyor, altyazı yüzün üstünde, polaroidde baş kesik, kapanış klibinin başında önceki
-videodan kare. Düzelt → yeniden kur → yeniden bak. Sesi dinleyemezsin: bunu teslimde açıkça söyle.
+videodan kare, taşan uzun altyazı, serif fontta harfe benzeyen rakam, fazla karanlık genel görünüm. Düzelt → yeniden kur → yeniden bak. Sesi dinleyemezsin: bunu teslimde açıkça söyle.
 
 ### 10. Teslim ve düzeltme turları
 MP4'ü gönder; kısa özet: süre, değişenler, harcanan kredi, hak durumu belirsiz görseller, doğrulayamadıkların.

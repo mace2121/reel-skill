@@ -123,16 +123,19 @@ def is_keyword(word, keywords):
     return any(w.startswith(norm(k)) for k in keywords if norm(k))
 
 
-def chunk_captions(words, style):
-    """earn: 1-3 kelimelik hap altyazı; hex: tek kelime."""
-    if style == "hex":
+def chunk_captions(words, style, mode=None):
+    """earn: 1-3 kelimelik hap altyazı; hex: tek kelime; mode="phrase": 2-4 kelimelik öbek (kelime kelime belirir)."""
+    maxw = 4 if mode == "phrase" else 3
+    if style == "hex" and mode != "phrase":
         return [{"text": w["w"], "start": w["start"], "end": w["end"], "words": [i]}
                 for i, w in enumerate(words)]
     chunks, cur = [], []
     for i, w in enumerate(words):
         cur.append(i)
         end_punct = w["w"][-1] in ".,!?;:…"
-        if len(cur) >= 3 or end_punct or (i + 1 < len(words) and words[i + 1]["start"] - w["end"] > 0.3):
+        nxt_len = (sum(len(words[j]["w"]) + 1 for j in cur) + len(words[i + 1]["w"])) if i + 1 < len(words) else 0
+        too_wide = mode == "phrase" and nxt_len > 24   # serif öbek kadrajdan taşmasın
+        if too_wide or len(cur) >= maxw or end_punct or (i + 1 < len(words) and words[i + 1]["start"] - w["end"] > 0.3):
             chunks.append(cur)
             cur = []
     if cur:
@@ -214,7 +217,9 @@ def build(shot, words_path=None, audio=None):
         "sfx": shot.get("sfx", {}),
         "fonts": shot.get("fonts", {}),
         "words": words,
-        "captions": chunk_captions(words, style),
+        "captions": chunk_captions(words, style, shot.get("caption_chunks")),
+        "caption": shot.get("caption") or {},
+        "grade": shot.get("grade") or {},
         "scenes": tl_scenes,
         "outro": outro,
         "warnings": ([f"6 saniyeden uzun sahneler (bölmeyi düşün): {', '.join(long_scenes)}"]

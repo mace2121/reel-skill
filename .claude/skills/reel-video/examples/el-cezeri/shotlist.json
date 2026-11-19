@@ -1,0 +1,248 @@
+{
+ "title": "El Cezerî",
+ "style": "hex",
+ "fps": 30,
+ "size": [
+  1080,
+  1920
+ ],
+ "voiceover": "assets/vo.mp3",
+ "music": {
+  "file": "assets/music.mp3",
+  "db": -18
+ },
+ "sfx": {
+  "whoosh_soft": "assets/sfx/whoosh_soft.wav",
+  "hit_soft": "assets/sfx/hit_soft.wav",
+  "paper": "assets/sfx/paper.wav",
+  "typewriter": "assets/sfx/typewriter.wav"
+ },
+ "fonts": {
+  "title": "PlayfairDisplay-Italic",
+  "caption": "PlayfairDisplay-Italic"
+ },
+ "caption_chunks": "phrase",
+ "caption": {
+  "mode": "phrase",
+  "size": 74,
+  "y": 0.5,
+  "color": "white",
+  "key_color": "gold"
+ },
+ "grade": {
+  "tint": 8,
+  "noise": 6,
+  "vignette": 38,
+  "light_leak_every": 0
+ },
+ "look": {
+  "backdrop": "$SKILL/assets/doku/paper_dark.jpg",
+  "transition_db": -18,
+  "fog": [
+   "$SKILL/assets/doku/fog_low.mp4",
+   "$SKILL/assets/doku/smoke_amb.mp4"
+  ],
+  "overlays": [
+   {
+    "name": "shafts",
+    "file": "$SKILL/assets/hex/shafts.mp4",
+    "blend": "multiply",
+    "opacity": 48
+   },
+   {
+    "name": "dust",
+    "file": "$SKILL/assets/doku/dust.mp4",
+    "blend": "screen",
+    "opacity": 45
+   },
+   {
+    "name": "scratches",
+    "file": "$SKILL/assets/doku/scratches.mp4",
+    "blend": "screen",
+    "opacity": 18
+   },
+   {
+    "name": "grain",
+    "file": "$SKILL/assets/doku/grain.mp4",
+    "blend": "overlay",
+    "opacity": 35
+   }
+  ]
+ },
+ "scenes": [
+  {
+   "id": "s01",
+   "narration": "Robotların hikâyesi, sandığımızdan çok daha eski.",
+   "frame": "cutout",
+   "image": "assets/img/otomat_fg.png",
+   "bg": "assets/img/ai_atolye.png",
+   "transition": "cut",
+   "caption_y": 0.15,
+   "fog": 0.5,
+   "dolly": 0.9,
+   "keywords": [
+    "eski"
+   ]
+  },
+  {
+   "id": "s02",
+   "narration": "Sekiz yüz yıl önce,",
+   "image": "assets/img/h_paper.jpg",
+   "move": "push_in",
+   "transition": "fade",
+   "caption_y": 0.47,
+   "keywords": [
+    "Sekiz",
+    "yüz"
+   ],
+   "caption_color": "#2A1E14",
+   "caption_key_color": "#8A2A16"
+  },
+  {
+   "id": "s03",
+   "narration": "El Cezerî,",
+   "frame": "cutout",
+   "image": "assets/img/portre_fg.png",
+   "bg": "assets/img/h_paper.jpg",
+   "transition": "fade",
+   "caption": false,
+   "title": {
+    "text": "El Cezerî",
+    "anim": "fade",
+    "color": "cream",
+    "pos": 0.8,
+    "size": 110,
+    "ribbon": true,
+    "keep_case": true
+   }
+  },
+  {
+   "id": "s04",
+   "narration": "Diyarbakır'da, Artuklu Sarayı'nda çalışan bir mühendisti.",
+   "image": "assets/img/ai_calisma.png",
+   "move": "parallax",
+   "transition": "wash",
+   "caption_y": 0.17,
+   "dolly": 0.92,
+   "keywords": [
+    "mühendisti"
+   ]
+  },
+  {
+   "id": "s05",
+   "narration": "Su saatleri,",
+   "frame": "cutout",
+   "image": "assets/img/h_fil_fg.png",
+   "bg": "assets/img/h_masa.jpg",
+   "transition": "fade",
+   "caption_y": 0.13,
+   "tag": "El Cezerî'nin kitabından: fil saati",
+   "keywords": [
+    "saatleri"
+   ]
+  },
+  {
+   "id": "s06",
+   "narration": "suyu yukarı taşıyan düzenekler",
+   "frame": "cutout",
+   "image": "assets/img/h_su_fg.png",
+   "bg": "assets/img/h_masa.jpg",
+   "transition": "whip_left",
+   "caption_y": 0.13,
+   "tag": "El Cezerî'nin kitabından: su çıkarma düzeneği",
+   "keywords": [
+    "suyu"
+   ]
+  },
+  {
+   "id": "s07",
+   "narration": "ve kendi kendine hareket eden otomatlar tasarladı.",
+   "frame": "cutout",
+   "image": "assets/img/h_tekne_fg.png",
+   "bg": "assets/img/h_masa.jpg",
+   "transition": "whip_left",
+   "caption_y": 0.2,
+   "tag": "El Cezerî'nin kitabından: müzisyen otomatlı tekne",
+   "keywords": [
+    "otomatlar"
+   ]
+  },
+  {
+   "id": "s08",
+   "narration": "Üstelik icatlarını, çizimleriyle birlikte bir kitapta anlattı.",
+   "image": "assets/img/ai_kitap.png",
+   "move": "push_in",
+   "transition": "wash",
+   "caption_y": 0.5,
+   "keywords": [
+    "kitapta"
+   ],
+   "title": {
+    "text": "Kitâbü'l-Hiyel",
+    "anim": "fade",
+    "color": "cream",
+    "pos": 0.86,
+    "size": 96,
+    "ribbon": true,
+    "keep_case": true,
+    "delay": 1.6
+   }
+  },
+  {
+   "id": "s09",
+   "narration": "Cizreli olan El Cezerî,",
+   "image": "assets/img/ai_cizre.png",
+   "move": "pan_right",
+   "transition": "fade",
+   "caption_y": 0.2,
+   "keywords": [
+    "Cizreli"
+   ]
+  },
+  {
+   "id": "s10",
+   "narration": "yaklaşık yirmi beş yılını Amid'de, yani bugünkü Diyarbakır'da geçirdi.",
+   "image": "assets/img/ai_amid.png",
+   "move": "push_in",
+   "transition": "fade",
+   "caption_y": 0.16,
+   "dolly": 0.92,
+   "keywords": [
+    "yirmi",
+    "beş",
+    "Amid"
+   ]
+  },
+  {
+   "id": "s11",
+   "narration": "Bu yüzden Diyarbakır, yalnızca surları ve tarihiyle değil,",
+   "image": "assets/img/h_sur.jpg",
+   "move": "pan_left",
+   "transition": "wash",
+   "caption_y": 0.2,
+   "tag": "Diyarbakır Surları, bugün",
+   "keywords": [
+    "Diyarbakır"
+   ]
+  },
+  {
+   "id": "s12",
+   "narration": "robotik tarihinin en eski öncülerinden birine ev sahipliği yapmasıyla da dikkat çekiyor.",
+   "image": "assets/img/ai_kapanis.png",
+   "move": "push_in",
+   "transition": "fade",
+   "caption_y": 0.15,
+   "fog": 0.4,
+   "dolly": 0.9,
+   "keywords": [
+    "robotik",
+    "öncülerinden"
+   ]
+  }
+ ],
+ "outro": {
+  "duration": 3.3,
+  "video": "$SKILL/assets/marka/outro_amed.mp4",
+  "text": []
+ }
+}

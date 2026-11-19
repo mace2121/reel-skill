@@ -108,3 +108,17 @@ soft_light, `opacity`), `transition_db` (geçiş sesi; kanal varsayılanı −16
 
 ## Otomatik ses efektleri
 Geçişte `whoosh`, slam / stamp başlıkta `hit`, polaroid / daire / cutout girişinde `pop`, `words` / `type` başlıkta `type`.
+
+## hex stili alanları
+Çalışan örnek: `examples/el-cezeri/shotlist.json`.
+- Kök: `"style": "hex"`, `"caption_chunks": "phrase"` (2–4 kelimelik, en çok ~24 karakterlik öbekler),
+  `"caption": {"mode": "phrase", "size": 74, "y": 0.5, "color": "white", "key_color": "gold"}`,
+  `"grade": {…}` (stil gradını ezer), `"fonts": {"title": "PlayfairDisplay-Italic", "caption": "PlayfairDisplay-Italic"}`.
+- Sahne: `caption_y` (0–1; yazıyı konunun üstündeki boş alana al: tablolar için 0.15–0.22),
+  `caption_color` / `caption_key_color` (`#hex`; açık zeminli sahnede koyu yazı, gölgesiz).
+- Başlık: `ribbon: true` (+ `ribbon_rgb`) isim şeridi.
+- Geçiş: `wash` (sıcak beyaz ışık yıkaması; rengi `look.wash_rgb`). Kısa sahneye (< 1,5 sn) `wash` koyma: yıkama
+  sahnenin yarısını yer, `fade` kullan.
+- Ses efekti adları: `whoosh_soft`, `hit_soft`, `paper`, `typewriter`.
+- Belge sayfası: sayfayı PIL ile krem kenarlık + gölge + 2° eğimle saydam 1296x2304 tuvale yerleştir, `cutout` ile koyu
+  masa zemininin önüne koy; sayfayı tuvalin ortasının biraz altına al (`cy ≈ 0.56`) ki üstte altyazıya yer kalsın.
